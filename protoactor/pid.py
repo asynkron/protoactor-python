@@ -1,5 +1,5 @@
 class PID(object):
-    def __init__(address, id):
+    def __init__(self, address, id, ref=None):
         self.address = address
         self.id = id
-        self.ref = None
+        self.ref = ref
