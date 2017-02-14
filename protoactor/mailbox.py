@@ -42,3 +42,17 @@ class UnboundedMailboxQueue(_MailboxQueue):
 
     def has_messages(self):
         return not self._queue.empty()
+
+
+class MailBox(object):
+    def post_user_message(msg):
+        pass
+    
+    def post_system_message(msg):
+        pass
+
+    def post_system_message(invoker, dispacher):
+        pass
+
+    def start():
+        pass
