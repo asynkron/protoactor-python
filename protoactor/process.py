@@ -20,7 +20,7 @@ class LocalProcess(Process):
         return self.__mailbox
 
     def send_user_message(self, pid, message, sender=None):
-        if (sender is not None):
+        if sender is not None:
             self.__mailbox.post_user_message(MessageSender(message, sender))
             return
 
@@ -28,3 +28,8 @@ class LocalProcess(Process):
 
     def send_system_message(self, pid, message):
         self.__mailbox.post_system_message(message)
+
+
+class DeadLettersProcess(Process):
+    pass
+    
