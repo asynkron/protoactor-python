@@ -10,3 +10,4 @@ def test_circular_dependencies():
     from protoactor.pid import *
     from protoactor.process import *
     from protoactor.processregistry import *
+    from protoactor.props import *
