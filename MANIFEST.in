@@ -1,0 +1,11 @@
+include LICENSE
+include README.md
+recursive-include tests *.py
+recursive-include protoactor *.py
+include .coveragerc
+include .travis.yml
+include pylintrc
+include tox.ini
+
+prune docs/_build
+prune tests/__pycache__
