@@ -1,35 +1,41 @@
-from messages import MessageSender, Stop
+from abc import abstractmethod, ABCMeta
 
-class Process(object):
-    def send_user_message(self, pid, message, sender=None):
-        pass
-
-    def stop (self, pid):
-        self.send_system_message(pid, Stop())
-
-    def send_system_message(self, pid, message):
-        pass
+from .pid import PID
+from .mailbox.mailbox import AbstractMailbox
+from .message_sender import MessageSender
 
 
-class LocalProcess(Process):
-    def __init__(self, mailbox):
+class AbstractProcess(metaclass=ABCMeta):
+    @abstractmethod
+    def send_user_message(self, pid: PID , message: object, sender: PID =None):
+        raise NotImplementedError('Should implement this method')
+
+    @abstractmethod
+    def send_system_message(self, pid: PID , message: object, sender: PID):
+        raise NotImplementedError('Should implement this method')
+
+    @abstractmethod
+    def stop(self):
+        raise NotImplementedError('Should implement this method')
+
+
+class LocalProcess(AbstractProcess):
+    def __init__(self, mailbox: AbstractMailbox):
         self.__mailbox = mailbox
 
-    @property
-    def mailbox(self):
-        return self.__mailbox
-
-    def send_user_message(self, pid, message, sender=None):
-        if sender is not None:
+    def send_user_message(self, pid: PID, message: object, sender: PID = None):
+        if sender:
             self.__mailbox.post_user_message(MessageSender(message, sender))
-            return
+        else:
+            self.__mailbox.post_user_message(message)
 
-        self.__mailbox.post_user_message(message)
+    def send_system_message(self, pid: PID, message: object, sender: PID):
+        pass
 
-    def send_system_message(self, pid, message):
-        self.__mailbox.post_system_message(message)
+    def stop(self):
+        pass
 
 
-class DeadLettersProcess(Process):
+class DeadLettersProcess(AbstractProcess):
     pass
-    
+

@@ -1,5 +1,5 @@
 import pytest
-from protoactor.props import Props, get_default_spawner
+from master_protoactor.props import Props, get_default_spawner
 
 def test_props_default_init():
     props = Props()

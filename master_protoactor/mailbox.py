@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from protoactor.utils import python_version
+from master_protoactor.utils import python_version
 
 if python_version() == 2:
     from Queue import Queue

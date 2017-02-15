@@ -1,9 +1,9 @@
 import pytest
-from protoactor.processregistry import ProcessRegistry
-from protoactor.pid import PID
-from protoactor.process import LocalProcess
-from protoactor.mailbox import MailBox
-from protoactor.process import DeadLettersProcess
+from master_protoactor.processregistry import ProcessRegistry
+from master_protoactor.pid import PID
+from master_protoactor.process import LocalProcess
+from master_protoactor.mailbox import MailBox
+from master_protoactor.process import DeadLettersProcess
 
 def test_get_nohost():
     test_pid = PID(address='nohost', id='id')

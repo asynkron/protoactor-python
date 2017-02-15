@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from protoactor.mailbox import UnboundedMailboxQueue, _MailboxQueue
+from master_protoactor.mailbox import UnboundedMailboxQueue, _MailboxQueue
 
 
 def test_mailbox_adds():

@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 def get_version():
-    init_py = open('protoactor/__init__.py').read()
+    init_py = open('master_protoactor/__init__.py').read()
     # TODO: make this work with both single and double quotes
     metadata = dict(re.findall("__([a-z]+)__ = \"([^\"]+)\"", init_py))
     return metadata['version']
@@ -16,8 +16,8 @@ setup(
     license="Apache License 2.0",
     description="Protocol buffers & actors",
     long_description="",
-    packages=["protoactor"],
-    package_dir={"protoactor": "protoactor"},
+    packages=["master_protoactor"],
+    package_dir={"master_protoactor": "master_protoactor"},
     zip_safe=False,
     include_package_data=True,
     platforms="any",

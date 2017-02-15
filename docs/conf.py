@@ -33,7 +33,7 @@ project = u'Protoactor'
 
 
 def get_version():
-    init_py = open('../protoactor/__init__.py').read()
+    init_py = open('../master_protoactor/__init__.py').read()
     # TODO: make this work with both single and double quotes
     metadata = dict(re.findall("__([a-z]+)__ = \"([^\"]+)\"", init_py))
     return metadata['version']
@@ -46,7 +46,7 @@ exclude_patterns = ['_build']
 
 pygments_style = 'sphinx'
 
-modindex_common_prefix = ['protoactor.']
+modindex_common_prefix = ['master_protoactor.']
 
 
 # -- Options for HTML output --------------------------------------------------
@@ -67,7 +67,7 @@ htmlhelp_basename = 'Protoactor'
 latex_documents = [
     (
         'index',
-        'protoactor.tex',
+        'master_protoactor.tex',
         'Protoactor Documentation',
         'manual',
     ),

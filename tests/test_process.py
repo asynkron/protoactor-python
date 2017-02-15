@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 import pytest
 from mock import Mock
-from protoactor.process import LocalProcess
-from protoactor.mailbox import MailBox
-from protoactor.messages import MessageSender
+from master_protoactor.process import LocalProcess
+from master_protoactor.mailbox import MailBox
+from master_protoactor.messages import MessageSender
 
 
 def test_get_mailbox_property():
