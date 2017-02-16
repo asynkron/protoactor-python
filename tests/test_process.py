@@ -41,7 +41,7 @@ def test_send_user_message_with_sender():
     lp.send_user_message(1, "message", "sender")
     mess = mailbox.post_user_message.call_args[0][0]
 
-    assert (type(mess) is MessageSender) == True
+    assert isinstance(mess, MessageSender) is True
     assert mess.message == "message"
     assert mess.sender == "sender"
 

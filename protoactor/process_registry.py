@@ -4,7 +4,7 @@ import threading
 from pid import PID
 from process import DeadLettersProcess
 
-__no_host = "nonhost"
+non_host = "nonhost"
 
 
 class ProcessRegistry(object):
@@ -12,38 +12,38 @@ class ProcessRegistry(object):
     def __init__(self, resolver):
         self._hostResolvers = [resolver]
         # python dict structure is atomic for primitive actions. Need to be checked
-        self._local_actor_refs = {}
-        self.sequence_id = 0
-        self.address = __no_host
+        self.__local_actor_refs = {}
+        self.__sequence_id = 0
+        self.address = non_host
         self._lock = threading.Lock()
 
     def get(self, pid):
         """Get the process ID from the process registry."""
 
-        if pid.address not in [__no_host, self.address]:
+        if pid.address not in [non_host, self.address]:
             for resolver in self._hostResolvers:
                 reff = resolver(pid)
                 if reff is None:
                     continue
-
-                pid.ref = reff
+               		
+                pid.aref = reff
                 return reff
-
-        aref = self._local_actor_refs.get('host', None)
+	
+        aref = self.__local_actor_refs.get(pid.id, None)
         if aref is not None:
             return aref
-
+	
         return DeadLettersProcess()
 
     def add(self, id, aref):
         pid = PID(id=id, aref=aref, address=self.address)
-        self._localActorRefs[id] = aref
+        self.__local_actor_refs[id] = aref
         return pid
 
     def remove(self, pid):
-        self._local_actor_refs.pop(pid.id)
+        self.__local_actor_refs.pop(pid.id)
 
     def next_id(self):
         with self._lock:
-            self.sequence_id += 1
-        return self.sequence_id
+            self.__sequence_id += 1
+        return self.__sequence_id
