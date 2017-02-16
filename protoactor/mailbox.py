@@ -45,14 +45,15 @@ class UnboundedMailboxQueue(_MailboxQueue):
 
 
 class MailBox(object):
-    def post_user_message(msg):
-        pass
-    
-    def post_system_message(msg):
-        pass
 
-    def post_system_message(invoker, dispacher):
-        pass
+    def post_user_message(self, msg):
+        raise NotImplementedError("Implement this on a subclass")
 
-    def start():
-        pass
+    def post_system_message(self, msg):
+        raise NotImplementedError("Implement this on a subsclass")
+
+    def post_system_message(self, invoker, dispatcher):
+        raise NotImplementedError("Implement this on a subclass")
+
+    def start(self):
+        raise NotImplementedError("Implement this on a subclass")
