@@ -14,3 +14,23 @@ def test_python_version_does_not_break():
     s2 = TestSingleton()
 
     assert s1 is s2
+
+def test_singleton_for_different_classes():
+    @singleton
+    class A(object):
+        def __init__(self):
+            self.a = ""
+
+    @singleton
+    class B(object):
+        def __init__(self):
+            self.b = ""
+
+    a = A()
+    a1 = A()
+    b = B()
+    b1 = B()
+
+    assert a is a1
+    assert b is b1
+    assert not(a is b1)
