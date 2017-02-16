@@ -6,7 +6,7 @@ from .process import AbstractProcess, DeadLettersProcess
 
 @singleton
 class ProcessRegistry:
-    def __init__(self, resolver, host :str = "nonhost"):
+    def __init__(self, resolver = None, host :str = "nonhost"):
         self._hostResolvers = [resolver]
         # python dict structure is atomic for primitive actions. Need to be checked
         self.__local_actor_refs = {}
@@ -32,15 +32,15 @@ class ProcessRegistry:
                 pid.ref = reff
                 return reff
 
-        aref = self.__local_actor_refs.get(pid.id, None)
-        if aref is not None:
-            return aref
+        ref = self.__local_actor_refs.get(pid.id, None)
+        if ref is not None:
+            return ref
 
         return DeadLettersProcess()
 
-    def add(self, id, aref):
-        pid = PID(address=self.address, id=id, ref=aref)
-        self.__local_actor_refs[id] = aref
+    def add(self, id:str, ref:AbstractProcess) -> PID:
+        pid = PID(address=self.address, id=id, ref=ref)
+        self.__local_actor_refs[id] = ref
         return pid
 
     def remove(self, pid):

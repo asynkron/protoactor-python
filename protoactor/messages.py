@@ -24,7 +24,7 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who, reason, crs):
+    def __init__(self, who, reason: Exception, crs):
         self.__who = who
         self.__reason = reason
         self.__crs = crs
@@ -34,7 +34,7 @@ class Failure(AbstractSystemMessage):
         return self.__who
 
     @property
-    def reason(self):
+    def reason(self) -> Exception:
         return self.__reason
 
     @property

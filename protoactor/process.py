@@ -1,8 +1,10 @@
 from abc import abstractmethod, ABCMeta
+from asyncio import Task
 
-from .pid import PID
+from .invoker import AbstractInvoker
 from .mailbox.mailbox import AbstractMailbox
 from .message_sender import MessageSender
+from .pid import PID
 
 
 class AbstractProcess(metaclass=ABCMeta):
@@ -11,7 +13,7 @@ class AbstractProcess(metaclass=ABCMeta):
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
-    def send_system_message(self, pid: PID , message: object, sender: PID):
+    def send_system_message(self, pid: PID , message: object):
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
@@ -19,7 +21,7 @@ class AbstractProcess(metaclass=ABCMeta):
         raise NotImplementedError('Should implement this method')
 
 
-class LocalProcess(AbstractProcess):
+class LocalProcess(AbstractProcess, AbstractInvoker):
     def __init__(self, mailbox: AbstractMailbox):
         self.__mailbox = mailbox
 
@@ -29,12 +31,17 @@ class LocalProcess(AbstractProcess):
         else:
             self.__mailbox.post_user_message(message)
 
-    def send_system_message(self, pid: PID, message: object, sender: PID):
-        pass
+    def send_system_message(self, pid: PID, message: object):
+        self.__mailbox.post_system_message(message)
 
     def stop(self):
-        pass
+        raise NotImplementedError("Should Implement this method")
 
+    def invoke_system_message(self, message: object) -> Task:
+        raise NotImplementedError("Should Implement this method")
+
+    def escalate_failure(self, reason: Exception, message: object):
+        raise NotImplementedError("Should Implement this method")
 
 class DeadLettersProcess(AbstractProcess):
     pass

@@ -1,13 +1,14 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable
 
+from .process_registry import ProcessRegistry
 from .props import Props
-from .context import Context
+from .context import AbstractContext
 from .pid import PID
 
 class Actor(metaclass=ABCMeta):
     @abstractmethod
-    async def receive(self, context: Context):
+    async def receive(self, context: AbstractContext):
         pass
 
 
@@ -20,7 +21,7 @@ def from_func(receive) -> Props:
 
 
 def spawn(props: Props) -> PID:
-    pass
+    return props.spawn(ProcessRegistry().next_id())
 
 
 def spawn_prefix(props, prefix: str):
