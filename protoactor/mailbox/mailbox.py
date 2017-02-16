@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 
-from .mailbox.queue import AbstractQueue
+from .queue import AbstractQueue
 
 
 class MailBoxStatus(Enum):

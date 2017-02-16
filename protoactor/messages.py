@@ -1,6 +1,7 @@
 from abc import ABCMeta
 
 from protoactor.pid import PID
+from .restart_statistics import RestartStatistics
 
 
 class AbstractSystemMessage(metaclass=ABCMeta):
@@ -24,7 +25,7 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who, reason: Exception, crs):
+    def __init__(self, who, reason: Exception, crs: RestartStatistics):
         self.__who = who
         self.__reason = reason
         self.__crs = crs
@@ -38,7 +39,7 @@ class Failure(AbstractSystemMessage):
         return self.__reason
 
     @property
-    def restart_statistics(self):
+    def restart_statistics(self) -> RestartStatistics:
         return self.__crs
 
 

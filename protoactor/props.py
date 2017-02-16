@@ -1,8 +1,11 @@
+from asyncio import Task
 from typing import Callable
 
+from protoactor.invoker import AbstractInvoker
+from .supervision import AbstractSupervisorStrategy
 from .dispatcher import AbstractDispatcher, ProcessDispatcher
 from .actor import Actor
-from .context import AbstractContext
+from .context import LocalContext, AbstractContext
 from .mailbox.mailbox import AbstractMailbox, Mailbox
 from .mailbox.queue import UnboundedMailboxQueue
 from .messages import Started
@@ -12,54 +15,80 @@ from .process_registry import ProcessRegistry
 
 
 def default_spawner(id: str, props: 'Props', parent: PID) -> PID:
-    context = AbstractContext()
-    mailbox = props.produce_mailbox()
+    context = LocalContext(props.producer, props.supervisor, props.middleware_chain, parent)
+    mailbox = props.produce_mailbox(context, props.dispatcher)
     process = LocalProcess(mailbox)
 
     pid = ProcessRegistry().add(id, process)
     context.self = pid
 
-    mailbox.register_handlers(process, props.dispatcher)
     mailbox.post_system_message(Started())
     mailbox.start()
+
     return pid
 
 
-def default_mailbox_producer():
-    return Mailbox(UnboundedMailboxQueue(), UnboundedMailboxQueue())
+def default_mailbox_producer(invoker: AbstractInvoker, dispatcher: AbstractDispatcher):
+    mailbox = Mailbox(UnboundedMailboxQueue(), UnboundedMailboxQueue())
+    mailbox.register_handlers(invoker, dispatcher)
+    return mailbox
 
 
 class Props:
     def __init__(self, producer: Callable[[], Actor] = None,
                  spawner: Callable[[str, 'Props', PID], PID] = default_spawner,
-                 mailbox_producer: Callable[[], AbstractMailbox] = default_mailbox_producer,
-                 dispatcher: AbstractDispatcher = ProcessDispatcher()):
+                 mailbox_producer: Callable[[AbstractInvoker, AbstractDispatcher], AbstractMailbox] = default_mailbox_producer,
+                 dispatcher: AbstractDispatcher = ProcessDispatcher(),
+                 supervisor_strategy: AbstractSupervisorStrategy = None,
+                 middleware: [Callable[[AbstractContext], [Task]]] = None,
+                 middleware_chain: Callable[[AbstractContext], [Task]] = None):
         self.__producer = producer
         self.__spawner = spawner
         self.__mailbox_producer = mailbox_producer
-        # self.__supervisor_strategy = kwargs.get('supervisor_strategy', None)
+        self.__supervisor_strategy = supervisor_strategy
         self.__dispatcher = dispatcher
-        # self.__middleware = kwargs.get('middleware', [])
-        # self.__middleware_chain = kwargs.get('middleware_chain', None)
+        self.__middleware = middleware
+        self.__middleware_chain = middleware_chain
+
+    @property
+    def producer(self) -> Callable[[], Actor]:
+        return self.__producer
+
+    @property
+    def supervisor(self):
+        return self.__supervisor_strategy
+
+    @property
+    def middleware_chain(self):
+        return self.__middleware_chain
 
     @property
     def dispatcher(self):
         return self.__dispatcher
 
     def with_producer(self, producer: Callable[[], Actor]) -> 'Props':
-        pass
+        return self.__copy_with({'_Props__producer': producer})
 
-    def with_dispatcher(self, producer: Callable[[], Actor]) -> 'Props':
-        pass
+    def with_dispatcher(self, dispatcher: AbstractDispatcher) -> 'Props':
+        return self.__copy_with({'_Props__dispatcher': dispatcher})
 
-    def with_middleware(self, *params: Callable[[Actor], Actor]) -> 'Props':
-        pass
+    def with_middleware(self, middleware: [Callable[[AbstractContext], [Task]]]) -> 'Props':
+        return self.__copy_with({'_Props__middleware': middleware})
 
-    def with_mailbox(self, *params: Callable[[Actor], Actor]) -> 'Props':
-        pass
+    def with_mailbox_producer(self, mailbox_producer: Callable[[], AbstractMailbox]) -> 'Props':
+        return self.__copy_with({'_Props__mailbox_producer': mailbox_producer})
+
+    def with_supervisor_strategy(self, supervisor_strategy) -> 'Props':
+        return self.__copy_with({'_Props__supervisor_strategy': supervisor_strategy})
 
     def spawn(self, id: str, parent: PID = None) -> PID:
         return self.__spawner(id, self, parent)
 
-    def produce_mailbox(self) -> AbstractMailbox:
-        return self.__mailbox_producer()
+    def produce_mailbox(self, invoker: AbstractInvoker, dispatcher: AbstractDispatcher) -> AbstractMailbox:
+        return self.__mailbox_producer(invoker, dispatcher)
+
+    def __copy_with(self, new_params:dict) -> 'Props':
+        params = self.__dict__
+        params.update(new_params)
+
+        return Props(**params)

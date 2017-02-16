@@ -8,7 +8,7 @@ class AbstractInvoker(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def invoke_system_message(self, message: object) -> Task:
+    async def invoke_user_message(self, message: object) -> Task:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
