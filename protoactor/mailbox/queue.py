@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABCMeta
 from multiprocessing import Queue
+from typing import Optional
 
 
 class AbstractQueue(metaclass=ABCMeta):
@@ -8,25 +9,25 @@ class AbstractQueue(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method.")
 
     @abstractmethod
-    def push(self, msg):
+    def push(self, message: object):
         raise NotImplementedError("Should Implement this method.")
 
     @abstractmethod
-    def pop(self):
+    def pop(self) -> Optional[object]:
         raise NotImplementedError("Should Implement this method.")
 
 
 class UnboundedMailboxQueue(AbstractQueue):
     __messages = Queue()
 
-    def pop(self):
+    def pop(self) -> Optional[object]:
         try:
             return self.__messages.get_nowait()
         except Queue.empty:
             return None
 
-    def push(self, msg):
-        self.__messages.put_nowait(msg)
+    def push(self, message: object):
+        self.__messages.put_nowait(message)
 
     def has_messages(self) -> bool:
         return not self.__messages.empty()

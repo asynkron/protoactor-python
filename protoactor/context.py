@@ -77,15 +77,15 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def set_behavior(self, behavior: Callable[['AbstractContext'], [Task]]):
+    def set_behavior(self, behavior: Callable[[Actor, 'AbstractContext'], [Task]]):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def push_behavior(self, behavior: Callable[['AbstractContext'], [Task]]):
+    def push_behavior(self, behavior: Callable[[Actor, 'AbstractContext'], [Task]]):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def pop_behavior(self) -> Callable[['AbstractContext'], [Task]]:
+    def pop_behavior(self) -> Callable[[Actor, 'AbstractContext'], [Task]]:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -110,7 +110,7 @@ class LocalContext(AbstractContext, AbstractInvoker):
 
         self.__stopping: bool = False
         self.__restarting: bool = False
-        self.__receive: bool = None
+        self.__receive: Callable[[Actor, AbstractContext], [Task]] = None
         self.__restart_statistics: RestartStatistics = None
 
         self.__behaviour = []
@@ -120,7 +120,7 @@ class LocalContext(AbstractContext, AbstractInvoker):
     def watch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
 
-    def pop_behavior(self) -> Callable[['AbstractContext'], [Task]]:
+    def pop_behavior(self) -> Callable[[Actor, AbstractContext], [Task]]:
         raise NotImplementedError("Should Implement this method")
 
     def unwatch(self, pid: PID):
@@ -129,7 +129,7 @@ class LocalContext(AbstractContext, AbstractInvoker):
     def spawn(self, props: Props) -> PID:
         raise NotImplementedError("Should Implement this method")
 
-    def set_behavior(self, receive: Callable[['AbstractContext'], [Task]]):
+    def set_behavior(self, receive: Callable[[Actor, AbstractContext], [Task]]):
         self.__behaviour.clear()
         self.__behaviour.append(receive)
         self.__receive = receive
@@ -140,7 +140,7 @@ class LocalContext(AbstractContext, AbstractInvoker):
     def spawn_named(self, props: Props, name: str) -> PID:
         raise NotImplementedError("Should Implement this method")
 
-    def push_behavior(self, behavior: Callable[['AbstractContext'], [Task]]):
+    def push_behavior(self, behavior: Callable[[Actor, AbstractContext], [Task]]):
         raise NotImplementedError("Should Implement this method")
 
     def spawn_prefix(self, props: Props, prefix: str) -> PID:
@@ -166,14 +166,14 @@ class LocalContext(AbstractContext, AbstractInvoker):
     def children(self):
         raise NotImplementedError("Should Implement this method")
 
-    def __actor_receive(self, context: AbstractContext):
-        return self.actor.receive(context)
+    # def __actor_receive(self, context: AbstractContext):
+    #     return self.actor.receive(context)
 
     def __incarnate_actor(self):
         self.__restarting = False
         self.__stopping = False
         self.actor = self.__producer()
-        self.set_behavior(self.__actor_receive)
+        self.set_behavior(self.actor.receive)
 
     # AbstractInvoker Methods
     async def invoke_system_message(self, message: object) -> Task:

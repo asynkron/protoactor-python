@@ -1,8 +1,9 @@
 import datetime
+from typing import Optional
 
 
 class RestartStatistics:
-    def __init__(self, failure_count: int, last_failure_time: datetime.datetime):
+    def __init__(self, failure_count: int, last_failure_time: Optional[datetime.datetime]):
         self.__failure_count = failure_count
         self.__last_failure_time = last_failure_time
 
