@@ -47,7 +47,7 @@ class MailBox(object):
     def post_system_message(self, msg):
         raise NotImplementedError("Implement this on a subsclass")
 
-    def post_system_message(self, invoker, dispatcher):
+    def register_handlers(self, invoker, dispatcher):
         raise NotImplementedError("Implement this on a subclass")
 
     def start(self):
