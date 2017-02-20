@@ -1,13 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from asyncio import Task
 from datetime import timedelta
-from typing import Callable, List
+from typing import Callable, List, Set
 
-from .restart_statistics import RestartStatistics
-from .invoker import AbstractInvoker
-from .props import Props
-from .pid import PID
 from .actor import Actor
+from .invoker import AbstractInvoker
+from .mailbox.messages import SuspendMailbox, ResumeMailbox
+from .messages import Started, Stop, Terminated, Watch, Unwatch, Failure, Restart, Stopping
+from .pid import PID
+from .props import Props
+from .restart_statistics import RestartStatistics
 
 
 class AbstractContext(metaclass=ABCMeta):
@@ -162,7 +164,7 @@ class LocalContext(AbstractContext, AbstractInvoker):
         raise NotImplementedError("Should Implement this method")
 
     @property
-    def children(self):
+    def children(self) -> Set[PID]:
         raise NotImplementedError("Should Implement this method")
 
     # def __actor_receive(self, context: AbstractContext):
@@ -175,13 +177,64 @@ class LocalContext(AbstractContext, AbstractInvoker):
         self.set_behavior(self.actor.receive)
 
     # AbstractInvoker Methods
-    async def invoke_system_message(self, message: object) -> Task:
+    async def invoke_system_message(self, message: object) -> None:
+        try:
+            if isinstance(message, Started):
+                await self.invoke_user_message(message)
+            elif isinstance(message, Stop):
+                await self.__handle_stop()
+            elif isinstance(message, Terminated):
+                await self.__handle_terminated()
+            elif isinstance(message, Watch):
+                await self.__handle_watch(message)
+            elif isinstance(message, Unwatch):
+                await self.__handle_unwatch(message)
+            elif isinstance(message, Failure):
+                await self.__handle_failure(message)
+            elif isinstance(message, Restart):
+                await self.handle_restart()
+            elif isinstance(message, SuspendMailbox):
+                pass
+            elif isinstance(message, ResumeMailbox):
+                pass
+            else:
+                pass
+
+        except Exception as e:
+            self.escalate_failure(e, message)
+
+    async def invoke_user_message(self, message: object) -> None:
         raise NotImplementedError("Should Implement this method")
 
-    async def invoke_user_message(self, message: object) -> Task:
-        raise NotImplementedError("Should Implement this method")
-
-    def escalate_failure(self, reason: Exception, message: object):
+    def escalate_failure(self, reason: Exception, message: object) -> None:
         if not self.__restart_statistics:
             self.__restart_statistics = RestartStatistics(1, None)
+
+    async def __handle_stop(self):
+        self.__restarting = False
+        self.__stopping = True
+        await self.invoke_user_message(Stopping())
+        if self.children:
+            for child in self.children:
+                child.stop()
+
+        await self.__try_restart_or_terminate()
+
+    async def __handle_terminated(self):
+        raise NotImplementedError("Should Implement this method")
+
+    async def __handle_watch(self, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    async def __handle_unwatch(self, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    async def __handle_failure(self, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    async def handle_restart(self):
+        raise NotImplementedError("Should Implement this method")
+
+    def __try_restart_or_terminate(self):
+        raise NotImplementedError("Should Implement this method")
 

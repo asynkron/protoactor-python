@@ -1,9 +1,10 @@
-from multiprocessing import Lock
+from multiprocessing import RLock
 from typing import Dict
 
-from .utils import singleton
 from .pid import PID
 from .process import AbstractProcess, DeadLettersProcess
+from .utils import singleton
+
 
 @singleton
 class ProcessRegistry:
@@ -13,7 +14,7 @@ class ProcessRegistry:
         self.__local_actor_refs: Dict = {}
         self.__sequence_id = 0
         self.__address = host
-        self.__lock = Lock()
+        self.__lock = RLock()
 
     @property
     def address(self) -> str:

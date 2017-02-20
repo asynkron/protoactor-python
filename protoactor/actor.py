@@ -8,7 +8,7 @@ from .pid import PID
 
 class Actor(metaclass=ABCMeta):
     @abstractmethod
-    async def receive(self, context: AbstractContext):
+    async def receive(self, context: AbstractContext) -> None:
         pass
 
 
