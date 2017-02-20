@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from asyncio import sleep
+from typing import List, Optional
+
 from .mailbox_statistics import AbstractMailBoxStatistics
 from .messages import SuspendMailbox, ResumeMailbox
 from .queue import AbstractQueue
@@ -23,35 +25,26 @@ class AbstractMailbox(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def register_handlers(self, invoker, dispatcher):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
     def start(self):
         raise NotImplementedError("Should Implement this method")
 
 
 class Mailbox(AbstractMailbox):
     def __init__(self, system_messages_queue: AbstractQueue, user_messages_queue: AbstractQueue,
-                 statistics: [AbstractMailBoxStatistics] = None):
+                 invoker: AbstractInvoker, dispatcher: AbstractDispatcher,
+                 *statistics: Optional[AbstractMailBoxStatistics]) -> None:
         self.__system_messages_queue = system_messages_queue
         self.__user_messages_queue = user_messages_queue
         self.__statistics = statistics if statistics else []
-        self.__invoker: AbstractInvoker = None
-        self.__dispatcher: AbstractDispatcher = None
+        self.__invoker = invoker
+        self.__dispatcher = dispatcher
         self.__status = MailBoxStatus.IDLE
         self.__suspended: bool = False
 
-    def register_handlers(self, invoker: AbstractInvoker, dispatcher: AbstractDispatcher):
-        self.__invoker = invoker
-        self.__dispatcher = dispatcher
-
-    # TODO check if invoker and dispatcher are set before calling __schedule
     def post_system_message(self, message: object):
         self.__system_messages_queue.push(message)
         self.__schedule()
 
-    # TODO check if invoker and dispatcher are set before calling __schedule
     def post_user_message(self, message: object):
         self.__user_messages_queue.push(message)
         for stats in self.__statistics:
@@ -68,14 +61,14 @@ class Mailbox(AbstractMailbox):
             self.__dispatcher.schedule(self.__run)
 
     async def __run(self):
-        while self.__system_messages_queue.has_messages() or (not self.__suspended and self.__user_messages_queue.has_messages()):
+        while self.__system_messages_queue.has_messages() or (
+            not self.__suspended and self.__user_messages_queue.has_messages()):
             await self.__process_messages()
-            self.__status = MailBoxStatus.IDLE
-            sleep(0)
+            await sleep(0)
 
+        self.__status = MailBoxStatus.IDLE
         for stats in self.__statistics:
             stats.mailbox_empty()
-
 
     async def __process_messages(self):
         throughput = self.__dispatcher.throughput
@@ -96,10 +89,9 @@ class Mailbox(AbstractMailbox):
 
                 message = self.__user_messages_queue.pop()
                 if message:
+                    await self.__invoker.invoke_user_message(message)
                     for stats in self.__statistics:
                         stats.message_received()
-
-                    await self.__invoker.invoke_user_message(message)
                 else:
                     break
         except Exception as e:

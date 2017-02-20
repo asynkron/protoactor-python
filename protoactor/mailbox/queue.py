@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABCMeta
 from multiprocessing import Queue
+from queue import Empty
 from typing import Optional
 
 
@@ -18,12 +19,13 @@ class AbstractQueue(metaclass=ABCMeta):
 
 
 class UnboundedMailboxQueue(AbstractQueue):
-    __messages = Queue()
+    def __init__(self):
+        self.__messages = Queue()
 
     def pop(self) -> Optional[object]:
         try:
             return self.__messages.get_nowait()
-        except Queue.empty:
+        except Empty:
             return None
 
     def push(self, message: object):

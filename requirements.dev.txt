@@ -8,3 +8,6 @@ pytest-xdist
 
 # Check tha the MANIFEST.in is correct
 check-manifest
+
+# Python 3
+mypy==0.471

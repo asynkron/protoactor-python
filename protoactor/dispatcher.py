@@ -12,7 +12,7 @@ class AbstractDispatcher(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def schedule(self, runner: Callable[[AbstractMailbox], [Task]]):
+    def schedule(self, runner: Callable[[AbstractMailbox], Task]):
         raise NotImplementedError("Should Implement this method")
 
 
@@ -21,5 +21,5 @@ class ProcessDispatcher(AbstractDispatcher):
     def throughput(self) -> int:
         raise NotImplementedError("Should Implement this method")
 
-    def schedule(self, runner: Callable[[AbstractMailbox], [Task]]):
+    def schedule(self, runner: Callable[[AbstractMailbox], Task]):
         raise NotImplementedError("Should Implement this method")

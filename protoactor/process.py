@@ -22,7 +22,7 @@ class AbstractProcess(metaclass=ABCMeta):
 
 
 class LocalProcess(AbstractProcess, AbstractInvoker):
-    def __init__(self, mailbox: AbstractMailbox):
+    def __init__(self, mailbox: AbstractMailbox) -> None:
         self.__mailbox = mailbox
 
     def send_user_message(self, pid: PID, message: object, sender: PID = None):
@@ -39,6 +39,9 @@ class LocalProcess(AbstractProcess, AbstractInvoker):
 
     def invoke_system_message(self, message: object) -> Task:
         raise NotImplementedError("Should Implement this method")
+
+    def invoke_user_message(self, message: object) -> Task:
+        pass
 
     def escalate_failure(self, reason: Exception, message: object):
         raise NotImplementedError("Should Implement this method")

@@ -25,13 +25,13 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who, reason: Exception, crs: RestartStatistics):
+    def __init__(self, who: PID, reason: Exception, crs: RestartStatistics) -> None:
         self.__who = who
         self.__reason = reason
         self.__crs = crs
 
     @property
-    def who(self):
+    def who(self) -> PID:
         return self.__who
 
     @property
@@ -44,17 +44,18 @@ class Failure(AbstractSystemMessage):
 
 
 class Watch(AbstractSystemMessage):
-    def __init__(self, watcher: PID):
+    def __init__(self, watcher: PID) -> None:
         self.watcher = watcher
 
 
 class Unwatch(AbstractSystemMessage):
-    def __init__(self, watcher: PID):
+    def __init__(self, watcher: PID) -> None:
         self.watcher = watcher
 
 
 class Stop(AbstractSystemMessage):
     pass
+
 
 class Stopping(AutoReceiveMessage):
     pass
@@ -63,8 +64,10 @@ class Stopping(AutoReceiveMessage):
 class Stopped(AutoReceiveMessage):
     pass
 
+
 class Started(AbstractSystemMessage):
     pass
+
 
 class ReceiveTimeout(AbstractSystemMessage):
     pass

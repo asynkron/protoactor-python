@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class RestartStatistics:
-    def __init__(self, failure_count: int, last_failure_time: Optional[datetime.datetime]):
+    def __init__(self, failure_count: int, last_failure_time: Optional[datetime.datetime]) -> None:
         self.__failure_count = failure_count
         self.__last_failure_time = last_failure_time
 
@@ -21,11 +21,10 @@ class RestartStatistics:
 
         self.__failure_count += 1
 
-        if within_timedelta is None:
+        if not within_timedelta:
             return self.__failure_count <= max_retries_number
 
         max = datetime.datetime.now() - within_timedelta
-
         if self.__last_failure_time > max:
             return self.__failure_count <= max_retries_number
 

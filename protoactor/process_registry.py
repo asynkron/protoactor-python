@@ -1,4 +1,5 @@
 from multiprocessing import Lock
+from typing import Dict
 
 from .utils import singleton
 from .pid import PID
@@ -6,10 +7,10 @@ from .process import AbstractProcess, DeadLettersProcess
 
 @singleton
 class ProcessRegistry:
-    def __init__(self, resolver = None, host :str = "nonhost"):
+    def __init__(self, resolver = None, host :str = "nonhost") -> None:
         self._hostResolvers = [resolver]
         # python dict structure is atomic for primitive actions. Need to be checked
-        self.__local_actor_refs = {}
+        self.__local_actor_refs: Dict = {}
         self.__sequence_id = 0
         self.__address = host
         self.__lock = Lock()
@@ -26,14 +27,14 @@ class ProcessRegistry:
         if pid.address != self.__address:
             for resolver in self._hostResolvers:
                 reff = resolver(pid)
-                if reff is None:
+                if not reff:
                     continue
 
-                pid.ref = reff
+                pid.process = reff
                 return reff
 
         ref = self.__local_actor_refs.get(pid.id, None)
-        if ref is not None:
+        if ref:
             return ref
 
         return DeadLettersProcess()

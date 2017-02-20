@@ -13,6 +13,9 @@ $ .\dev.venv\Scripts\activate.ps1 # on Windows
 $ pip install -r requirements.dev.txt
 ```
 
+## Run mypu
+mypy --python-version 3.6 --fast-parser -p protoactor
+
 ## Run tests
 
 ```
