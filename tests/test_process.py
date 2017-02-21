@@ -13,6 +13,7 @@ def test_get_mailbox_property():
 
     assert lp.mailbox == mailbox
 
+
 def test_send_user_message():
     mailbox = MailBox()
     mailbox.post_user_message = Mock()
@@ -23,6 +24,7 @@ def test_send_user_message():
 
     assert mess == "message"
 
+
 def test_send_user_message():
     mailbox = MailBox()
     mailbox.post_system_message = Mock()
@@ -32,6 +34,7 @@ def test_send_user_message():
     mess = mailbox.post_system_message.call_args[0][0]
 
     assert mess == "message"
+
 
 def test_send_user_message_with_sender():
     mailbox = MailBox()
@@ -50,7 +53,7 @@ def test_event_stream_publish_subscribe(capsys):
     es = EventStream()
 
     def fun(x):
-        print "fun with %(val)s" % {'val': x}
+        print("fun with %(val)s" % {'val': x})
 
     es.subscribe(fun)
     es.publish("message")

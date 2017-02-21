@@ -1,4 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import datetime
+
 
 class RestartStatistics(object):
     def __init__(self, failure_count, last_failure_time):

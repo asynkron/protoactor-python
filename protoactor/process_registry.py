@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import threading
-from pid import PID
-from process import DeadLettersProcess
+from protoactor.pid import PID
+from protoactor.process import DeadLettersProcess
 
 non_host = "nonhost"
 
@@ -25,14 +25,14 @@ class ProcessRegistry(object):
                 reff = resolver(pid)
                 if reff is None:
                     continue
-               		
+
                 pid.aref = reff
                 return reff
-	
+
         aref = self.__local_actor_refs.get(pid.id, None)
         if aref is not None:
             return aref
-	
+
         return DeadLettersProcess()
 
     def add(self, id, aref):

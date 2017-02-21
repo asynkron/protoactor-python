@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from uuid import uuid4
-from messages import MessageSender, Stop
+from protoactor.messages import MessageSender, Stop
 
 
 class Process(object):
@@ -10,7 +10,7 @@ class Process(object):
     def send_user_message(self, pid, message, sender=None):
         raise NotImplementedError("You need to implement this")
 
-    def stop (self, pid):
+    def stop(self, pid):
         self.send_system_message(pid, Stop())
 
     def send_system_message(self, pid, message):
@@ -90,10 +90,11 @@ class EventStream(object):
 def _report_deadletters(msg):
     """Print a message for deadletters"""
     if isinstance(msg, DeadLetterEvent):
-        msg = """[DeadLetterEvent] %(pid)s got %(message_type)s:%(message)s from
-        %(sender)s""" % { "pid": msg.pid,
-                         "message_type": type(msg.message),
-                         "message": msg.message,
-                         "sender": msg.sender
-                         }
+        msg = """[DeadLetterEvent] %(pid)s got %(message_type)s:%(message)s
+        from %(sender)s""" % {
+            "pid": msg.pid,
+            "message_type": type(msg.message),
+            "message": msg.message,
+            "sender": msg.sender
+        }
         print(msg)
