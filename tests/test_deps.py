@@ -9,5 +9,5 @@ def test_circular_dependencies():
     from protoactor.mailbox import *
     from protoactor.pid import *
     from protoactor.process import *
-    from protoactor.processregistry import *
+    from protoactor.process_registry import *
     from protoactor.props import *
