@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from master_protoactor.utils import singleton
+from protoactor.utils import singleton
 
 
 def test_python_version_does_not_break():

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from unittest import TestCase
+
 import pytest
 
 from master_protoactor.mailbox import UnboundedMailboxQueue, _MailboxQueue

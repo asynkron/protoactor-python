@@ -1,13 +1,11 @@
-sphinx
-flake8
-pytest
-mock
-tox
-pytest-cov
-pytest-xdist
-
 # Check tha the MANIFEST.in is correct
 check-manifest
 
 # Python 3
 mypy==0.471
+pytest==3.0.5
+tox
+pytest-cov
+sphinx
+flake8
+pytest-xdist
