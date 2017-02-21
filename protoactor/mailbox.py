@@ -1,12 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from protoactor.utils import python_version
-
-if python_version() == 2:
-    from Queue import Queue
-else:  # Python 3
-    from queue import Queue  # pylint:disable=E0401
+from queue import Queue
 
 
 class MailboxType(object):

@@ -1,27 +1,17 @@
-from messages import Started
-from context import get_default_receive
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from protoactor.messages import Started
+from protoactor.context import get_default_receive
 
-def get_default_spawner(name, props, parent):
-    ctx = Context(props.producer, props.supervisor_strategy, props.middleware_chain, parent)
-    mailbox = props.mailbox_producer
-    dispatcher = props.dispatcher
-    reff = LocalProcess(mailbox)
-    pr = ProcessRegistry().add(name, reff)
-    ctx.self = pid
-
-    mailbox.register_handlers(ctx, dispatcher)
-    mailbox.post_system_message(Started())
-    mailbox.start()
-
-    return pid
 
 def middleware_chain_concat(middleware):
-    rv_list = list(reverse(middleware))
+    rv_list = list(reversed(middleware))
     receieve = get_default_receive()
     for m in rv_list:
         receieve = m(receieve)
     
     return receieve
+
 
 class Props(object):
     def __init__(self, *args, **kwargs):

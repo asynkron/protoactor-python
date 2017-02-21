@@ -1,21 +1,22 @@
 import pytest
-from protoactor.props import Props, get_default_spawner
+from protoactor.props import Props
+
 
 def test_props_default_init():
     props = Props()
-    
-    assert props.producer == None
+
+    assert props.producer is None
     # TODO: change these value with concrete default instances
-    assert props.mailbox_producer == None
-    assert props.supervisor_strategy == None
-    assert props.dispatcher == None
+    assert props.mailbox_producer is None
+    assert props.supervisor_strategy is None
+    assert props.dispatcher is None
     assert props.middleware == []
-    assert props.middleware_chain == None
-   
-    assert props.spawner == get_default_spawner
+    assert props.middleware_chain is None
+
 
 class PropsObj(object):
     pass
+
 
 @pytest.mark.parametrize("field,method,value", [
     ('producer', 'with_producer', PropsObj()),
@@ -26,7 +27,7 @@ class PropsObj(object):
 def test_props_with(field, method, value):
     props = Props()
 
-    with_method =  getattr(props, method)
+    with_method = getattr(props, method)
     new_props = with_method(value)
 
     results = [
