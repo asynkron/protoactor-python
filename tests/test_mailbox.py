@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from unittest import TestCase
+
 import pytest
 
-from protoactor.mailbox import UnboundedMailboxQueue, _MailboxQueue
+from master_protoactor.mailbox import UnboundedMailboxQueue, _MailboxQueue
 
 
 def test_mailbox_adds():
