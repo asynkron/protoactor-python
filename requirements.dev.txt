@@ -5,6 +5,7 @@ mock
 tox
 pytest-cov
 pytest-xdist
+mypy==0.471
 
 # Check tha the MANIFEST.in is correct
 check-manifest

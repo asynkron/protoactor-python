@@ -1,95 +1,73 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from protoactor.utils import singleton
+from abc import ABCMeta
+
+from protoactor.pid import PID
+from .restart_statistics import RestartStatistics
 
 
-class SystemMessage(object):
+class AbstractSystemMessage(metaclass=ABCMeta):
     pass
 
 
-class AutoReceiveMessage(object):
+class AutoReceiveMessage(metaclass=ABCMeta):
     pass
 
 
-class Terminated(SystemMessage):
+class Terminated(AbstractSystemMessage):
     pass
 
 
-@singleton
-class SuspendMailbox(SystemMessage):
+class Restarting:
     pass
 
 
-@singleton
-class ResumeMailbox(SystemMessage):
+class Restart(AbstractSystemMessage):
     pass
 
 
-class Failure(SystemMessage):
-
-    def __init__(self, who, reason):
-        self.who = who
-        self.reason = reason
+class Failure(AbstractSystemMessage):
+    def __init__(self, who: PID, reason: Exception, crs: RestartStatistics) -> None:
+        self.__who = who
+        self.__reason = reason
+        self.__crs = crs
 
     @property
-    def who(self):
-        return self.who
+    def who(self) -> PID:
+        return self.__who
 
     @property
-    def reason(self):
-        return self.reason
+    def reason(self) -> Exception:
+        return self.__reason
+
+    @property
+    def restart_statistics(self) -> RestartStatistics:
+        return self.__crs
 
 
-class Watch(SystemMessage):
-
-    def __init__(self, watcher):
+class Watch(AbstractSystemMessage):
+    def __init__(self, watcher: PID) -> None:
         self.watcher = watcher
 
 
-class Unwatch(SystemMessage):
-
-    def __init__(self, watcher):
+class Unwatch(AbstractSystemMessage):
+    def __init__(self, watcher: PID) -> None:
         self.watcher = watcher
 
 
-@singleton
-class Restart(SystemMessage):
+class Stop(AbstractSystemMessage):
     pass
 
 
-@singleton
-class Stop(SystemMessage):
-    pass
-
-
-@singleton
 class Stopping(AutoReceiveMessage):
     pass
 
 
-@singleton
-class Started(AutoReceiveMessage):
-    pass
-
-
-@singleton
 class Stopped(AutoReceiveMessage):
     pass
 
 
-class MessageSender(object):
+class Started(AbstractSystemMessage):
+    pass
 
-    def __init__(self, message, sender):
-        self._message = message
-        self._sender = sender
 
-    @property
-    def message(self):
-        """Return the message."""
-        return self._message
-
-    @property
-    def sender(self):
-        """Return the sender PID."""
-        return self._sender
+class ReceiveTimeout(AbstractSystemMessage):
+    pass

@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
-import threading
+from multiprocessing import RLock
 
 
 def singleton(cls):
     """Decorator to create singleton classes"""
 
     instances = {}
-    lock = threading.Lock()
+    lock = RLock()
 
     def get_instance(*args, **kwargs):
         if cls not in instances:
