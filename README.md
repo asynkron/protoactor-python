@@ -1,6 +1,10 @@
 # protoactor-python
 Proto Actor - Ultra fast distributed actors
 
+[![Join the chat at https://gitter.im/AsynkronIT/protoactor](https://badges.gitter.im/AsynkronIT/protoactor.svg)](https://gitter.im/AsynkronIT/protoactor?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+[![Build Status](https://travis-ci.org/AsynkronIT/protoactor-python.svg?branch=master)](https://travis-ci.org/AsynkronIT/protoactor-python)
+
 # Getting Started
 
 Ensure you have Python 3.6 with pip installed.
