@@ -16,6 +16,11 @@ $ source dev.venv/bin/activate # on POSIX systems
 $ .\dev.venv\Scripts\activate.ps1 # on Windows
 $ pip3 install -r requirements.dev.txt
 ```
+## Run mypy
+
+```
+mypy --python-version 3.6 --fast-parser -p protoactor
+```
 
 ## Run tests
 

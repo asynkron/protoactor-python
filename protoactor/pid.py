@@ -1,19 +1,40 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+from .process import AbstractProcess
+from .process_registry import ProcessRegistry
 
 
-class PID(object):
+class PID:
+    def __init__(self, address: str, id: str, ref: AbstractProcess) -> None:
+        self.__address = address
+        self.__id = id
+        self.__process: AbstractProcess = ref
 
-    def __init__(self, address, id, aref=None):
-        self.address = address
-        self.id = id
-        self.aref = aref
+    @property
+    def address(self):
+        return self.__address
 
-    def __str__(self):
-        """Generate a human readable string with the address and ID of
-        the PID."""
+    @property
+    def id(self):
+        return self.__id
 
-        return "%(address)s/%(id)s" % {
-            "address": self._address,
-            "id": self._id
-        }
+    @property
+    def process(self) -> AbstractProcess:
+        return self.__process
+
+    @process.setter
+    def process(self, ref: AbstractProcess) -> None:
+        self.__process = ref
+
+    def __repr__(self):
+        return "{} / {}".format(self.__address, self.__id)
+
+    def tell(self, msg):
+        if not self.__process:
+            self.__process = ProcessRegistry().get(self)
+
+        self.__process.send_user_message(self, msg)
+
+    def send_system_message(self, sys):
+        pass
+
+    def stop(self):
+        self.__process.stop()

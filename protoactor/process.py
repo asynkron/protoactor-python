@@ -1,100 +1,105 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+from abc import abstractmethod, ABCMeta
+from asyncio import Task
+from typing import Dict, Optional, Callable
 from uuid import uuid4
-from protoactor.messages import MessageSender, Stop
+
+from protoactor.utils import singleton
+from .invoker import AbstractInvoker
+from .mailbox.mailbox import AbstractMailbox
+from .message_sender import MessageSender
+from .pid import PID
 
 
-class Process(object):
-    """Base class representing a process."""
+class AbstractProcess(metaclass=ABCMeta):
+    @abstractmethod
+    def send_user_message(self, pid: PID, message: object, sender: PID = None):
+        raise NotImplementedError('Should implement this method')
 
-    def send_user_message(self, pid, message, sender=None):
-        raise NotImplementedError("You need to implement this")
+    @abstractmethod
+    def send_system_message(self, pid: PID, message: object):
+        raise NotImplementedError('Should implement this method')
 
-    def stop(self, pid):
-        self.send_system_message(pid, Stop())
-
-    def send_system_message(self, pid, message):
-        raise NotImplementedError("You need to implement this")
+    @abstractmethod
+    def stop(self):
+        raise NotImplementedError('Should implement this method')
 
 
-class LocalProcess(Process):
-    def __init__(self, mailbox):
+class LocalProcess(AbstractProcess, AbstractInvoker):
+    def __init__(self, mailbox: AbstractMailbox) -> None:
         self.__mailbox = mailbox
 
-    @property
-    def mailbox(self):
-        return self.__mailbox
-
-    def send_user_message(self, pid, message, sender=None):
-        if sender is not None:
+    def send_user_message(self, pid: PID, message: object, sender: PID = None):
+        if sender:
             self.__mailbox.post_user_message(MessageSender(message, sender))
-            return
+        else:
+            self.__mailbox.post_user_message(message)
 
-        self.__mailbox.post_user_message(message)
-
-    def send_system_message(self, pid, message):
+    def send_system_message(self, pid: PID, message: object):
         self.__mailbox.post_system_message(message)
 
+    def stop(self):
+        raise NotImplementedError("Should Implement this method")
 
-class DeadLetterEvent(object):
+    def invoke_system_message(self, message: object) -> Task:
+        raise NotImplementedError("Should Implement this method")
 
-    def __init__(self, pid, message, sender):
+    def invoke_user_message(self, message: object) -> Task:
+        pass
+
+    def escalate_failure(self, reason: Exception, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+
+class DeadLettersProcess(AbstractProcess):
+    def stop(self):
+        raise NotImplementedError("Should Implement this method")
+
+    def send_system_message(self, pid: PID, message: object):
+        EventStream().publish(DeadLetterEvent(pid, message, None))
+
+    def send_user_message(self, pid: PID, message: object, sender: PID = None):
+        EventStream().publish(DeadLetterEvent(pid, message, sender))
+
+
+class DeadLetterEvent:
+    def __init__(self, pid: PID, message: object, sender: Optional[PID]) -> None:
         self.__pid = pid
         self.__message = message
         self.__sender = sender
 
     @property
-    def pid(self):
-        """Get the PID"""
+    def pid(self) -> PID:
         return self.__pid
 
     @property
-    def message(self):
-        """Get the message"""
+    def message(self) -> object:
         return self.__message
 
     @property
-    def sender(self):
-        """Get the sender"""
+    def sender(self) -> PID:
         return self.__sender
 
 
-class DeadLettersProcess(Process):
-
-    def send_user_message(self, pid, message, sender=None):
-        """Send a user message using the event stream."""
-        EventStream().publish(DeadLetterEvent(pid, message, sender))
-
-    def send_system_message(self, pid, message):
-        """Send a sytem message using the event stream."""
-        EventStream().publish(DeadLetterEvent(pid, message, None))
-
-
-class EventStream(object):
-
+@singleton
+class EventStream:
     def __init__(self):
-        self._subscriptions = {}
-        self.subscribe(_report_deadletters)
+        self._subscriptions: Dict[uuid4, Callable[..., None]] = {}
+        self.subscribe(self.__report_deadletters)
 
-    def subscribe(self, fun):
-        """Subscribe to an event stream"""
+    def subscribe(self, fun: Callable[..., None]) -> None:
         uniq_id = uuid4()
         self._subscriptions[uniq_id] = fun
 
-    def publish(self, message):
-        """Publish a message to all subscribers"""
+    def publish(self, message: object) -> None:
         for sub in self._subscriptions.values():
             sub(message)
 
-
-def _report_deadletters(msg):
-    """Print a message for deadletters"""
-    if isinstance(msg, DeadLetterEvent):
-        msg = """[DeadLetterEvent] %(pid)s got %(message_type)s:%(message)s
-        from %(sender)s""" % {
-            "pid": msg.pid,
-            "message_type": type(msg.message),
-            "message": msg.message,
-            "sender": msg.sender
-        }
-        print(msg)
+    def __report_deadletters(self, message: DeadLetterEvent) -> None:
+        if isinstance(message, DeadLetterEvent):
+            console_message = """[DeadLetterEvent] %(pid)s got %(message_type)s:%(message)s from
+            %(sender)s""" % {"pid": message.pid,
+                             "message_type": type(message.message),
+                             "message": message.message,
+                             "sender": message.sender
+                             }
+            print(console_message)
