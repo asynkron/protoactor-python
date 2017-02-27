@@ -1,13 +1,10 @@
 from abc import ABCMeta, abstractmethod
-from enum import Enum
 from asyncio import sleep
-from typing import List, Optional
+from enum import Enum
+from typing import Optional
 
-from .mailbox_statistics import AbstractMailBoxStatistics
-from .messages import SuspendMailbox, ResumeMailbox
-from .queue import AbstractQueue
-from ..dispatcher import AbstractDispatcher
-from ..invoker import AbstractInvoker
+from . import mailbox_statistics, messages, queue
+from .. import dispatcher, invoker
 
 
 class MailBoxStatus(Enum):
@@ -30,9 +27,9 @@ class AbstractMailbox(metaclass=ABCMeta):
 
 
 class Mailbox(AbstractMailbox):
-    def __init__(self, system_messages_queue: AbstractQueue, user_messages_queue: AbstractQueue,
-                 invoker: AbstractInvoker, dispatcher: AbstractDispatcher,
-                 *statistics: Optional[AbstractMailBoxStatistics]) -> None:
+    def __init__(self, system_messages_queue: queue.AbstractQueue, user_messages_queue: queue.AbstractQueue,
+                 invoker: invoker.AbstractInvoker, dispatcher: dispatcher.AbstractDispatcher,
+                 *statistics: Optional[mailbox_statistics.AbstractMailBoxStatistics]) -> None:
         self.__system_messages_queue = system_messages_queue
         self.__user_messages_queue = user_messages_queue
         self.__statistics = statistics if statistics else []
@@ -76,10 +73,10 @@ class Mailbox(AbstractMailbox):
         try:
             for i in range(throughput):
                 message = self.__system_messages_queue.pop()
-                if message:
-                    if isinstance(message, SuspendMailbox):
+                if message is not None:
+                    if isinstance(message, messages.SuspendMailbox):
                         self.__suspended = True
-                    elif isinstance(message, ResumeMailbox):
+                    elif isinstance(message, messages.ResumeMailbox):
                         self.__suspended = False
                     else:
                         await self.__invoker.invoke_system_message(message)
@@ -88,7 +85,7 @@ class Mailbox(AbstractMailbox):
                         break
 
                 message = self.__user_messages_queue.pop()
-                if message:
+                if message is not None:
                     await self.__invoker.invoke_user_message(message)
                     for stats in self.__statistics:
                         stats.message_received()

@@ -1,7 +1,6 @@
 sphinx
 flake8
 pytest
-mock
 tox
 pytest-cov
 pytest-xdist

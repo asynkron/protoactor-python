@@ -21,7 +21,7 @@ class RestartStatistics:
 
         self.__failure_count += 1
 
-        if not within_timedelta:
+        if within_timedelta is None:
             return self.__failure_count <= max_retries_number
 
         max = datetime.datetime.now() - within_timedelta

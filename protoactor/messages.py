@@ -1,7 +1,6 @@
 from abc import ABCMeta
 
-from protoactor.pid import PID
-from .restart_statistics import RestartStatistics
+from. import pid, restart_statistics
 
 
 class AbstractSystemMessage(metaclass=ABCMeta):
@@ -25,13 +24,13 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who: PID, reason: Exception, crs: RestartStatistics) -> None:
+    def __init__(self, who: pid.PID, reason: Exception, crs: restart_statistics.RestartStatistics) -> None:
         self.__who = who
         self.__reason = reason
         self.__crs = crs
 
     @property
-    def who(self) -> PID:
+    def who(self) -> pid.PID:
         return self.__who
 
     @property
@@ -39,17 +38,17 @@ class Failure(AbstractSystemMessage):
         return self.__reason
 
     @property
-    def restart_statistics(self) -> RestartStatistics:
+    def restart_statistics(self) -> restart_statistics.RestartStatistics:
         return self.__crs
 
 
 class Watch(AbstractSystemMessage):
-    def __init__(self, watcher: PID) -> None:
+    def __init__(self, watcher: pid.PID) -> None:
         self.watcher = watcher
 
 
 class Unwatch(AbstractSystemMessage):
-    def __init__(self, watcher: PID) -> None:
+    def __init__(self, watcher: pid.PID) -> None:
         self.watcher = watcher
 
 

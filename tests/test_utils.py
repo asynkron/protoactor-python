@@ -3,7 +3,7 @@
 from protoactor.utils import singleton
 
 
-def test_python_version_does_not_break():
+def test_singleton():
 
     @singleton
     class TestSingleton(object):
