@@ -36,7 +36,7 @@ class Mailbox(AbstractMailbox):
         self.__invoker = invoker
         self.__dispatcher = dispatcher
         self.__status = MailBoxStatus.IDLE
-        self.__suspended: bool = False
+        self.__suspended = False
 
     def post_system_message(self, message: object):
         self.__system_messages_queue.push(message)
