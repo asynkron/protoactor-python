@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 from asyncio import Task
 from multiprocessing import Process
 from typing import Callable
@@ -6,7 +6,7 @@ from typing import Callable
 
 class AbstractDispatcher(metaclass=ABCMeta):
     @property
-    @abstractmethod
+    @abstractproperty
     def throughput(self) -> int:
         raise NotImplementedError("Should Implement this method")
 

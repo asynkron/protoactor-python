@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 from asyncio import Task
 from datetime import timedelta
 from typing import Callable, List, Set
@@ -33,27 +33,27 @@ class AbstractContext(metaclass=ABCMeta):
         self.__actor = actor
 
     @property
-    @abstractmethod
+    @abstractproperty
     def sender(self) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @property
-    @abstractmethod
+    @abstractproperty
     def message(self) -> object:
         raise NotImplementedError("Should Implement this method")
 
     @property
-    @abstractmethod
+    @abstractproperty
     def receive_timeout(self) -> timedelta:
         raise NotImplementedError("Should Implement this method")
 
     @property
-    @abstractmethod
+    @abstractproperty
     def children(self):
         raise NotImplementedError("Should Implement this method")
 
     @property
-    @abstractmethod
+    @abstractproperty
     def stash(self):
         raise NotImplementedError("Should Implement this method")
 
@@ -105,12 +105,12 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__middleware = middleware
         self.parent = parent
 
-        self.__stopping: bool = False
-        self.__restarting: bool = False
-        self.__receive: Callable[['Actor', AbstractContext], Task] = None
-        self.__restart_statistics: restart_statistics.RestartStatistics = None
+        self.__stopping = False
+        self.__restarting = False
+        self.__receive = None
+        self.__restart_statistics = None
 
-        self.__behaviour : List[Callable[['Actor', AbstractContext], Task]]= []
+        self.__behaviour = []
         self.__incarnate_actor()
 
     def watch(self, pid: pid.PID):

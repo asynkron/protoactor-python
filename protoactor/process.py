@@ -80,7 +80,7 @@ class DeadLetterEvent:
 @utils.singleton
 class EventStream:
     def __init__(self):
-        self._subscriptions: Dict[uuid4, Callable[..., None]] = {}
+        self._subscriptions = {}
         self.subscribe(self.__report_deadletters)
 
     def subscribe(self, fun: Callable[..., None]) -> None:

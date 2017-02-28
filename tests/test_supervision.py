@@ -18,7 +18,7 @@ def supervisor_data():
     supervisor = Supervisor()
     mailbox = Mailbox()
     local_process = LocalProcess(mailbox)
-    pid_child = PID(address='address', id='id', aref=local_process)
+    pid_child = PID(address='address', id='id', ref=local_process)
     restart_statistic = RestartStatistics(5, datetime(2017, 2, 15))
 
     return {

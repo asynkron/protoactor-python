@@ -46,6 +46,10 @@ class Props:
         return self.__producer
 
     @property
+    def mailbox_producer(self) -> Callable[[invoker.AbstractInvoker, 'AbstractDispatcher'], mailbox.AbstractMailbox]:
+        return self.__mailbox_producer
+
+    @property
     def supervisor(self):
         return self.__supervisor_strategy
 
@@ -83,4 +87,9 @@ class Props:
         params = self.__dict__
         params.update(new_params)
 
-        return Props(**params)
+        _params = {}
+        for key in params:
+            new_key = key.replace('_Props__', '')
+            _params[new_key] = params[key]
+
+        return Props(**_params)

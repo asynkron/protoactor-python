@@ -7,9 +7,9 @@ from . import utils, pid as pid_, process
 @utils.singleton
 class ProcessRegistry:
     def __init__(self, resolver=None, host: str = "nonhost") -> None:
-        self._hostResolvers = [resolver]
+        self._hostResolvers = [resolver] if resolver is not None else []
         # python dict structure is atomic for primitive actions. Need to be checked
-        self.__local_actor_refs: Dict = {}
+        self.__local_actor_refs = {}
         self.__sequence_id = 0
         self.__address = host
         self.__lock = RLock()
