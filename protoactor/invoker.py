@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from asyncio import Task
 
 
 class AbstractInvoker(metaclass=ABCMeta):

@@ -1,6 +1,6 @@
 import pytest
 import datetime
-import mock
+from unittest import mock
 from datetime import timedelta
 from protoactor.restart_statistics import RestartStatistics
 

@@ -1,17 +1,15 @@
 from multiprocessing import RLock
 from typing import Dict
 
-from .pid import PID
-from .process import AbstractProcess, DeadLettersProcess
-from .utils import singleton
+from . import utils, pid as pid_, process
 
 
-@singleton
+@utils.singleton
 class ProcessRegistry:
-    def __init__(self, resolver = None, host :str = "nonhost") -> None:
-        self._hostResolvers = [resolver]
+    def __init__(self, resolver=None, host: str = "nonhost") -> None:
+        self._hostResolvers = [resolver] if resolver is not None else []
         # python dict structure is atomic for primitive actions. Need to be checked
-        self.__local_actor_refs: Dict = {}
+        self.__local_actor_refs = {}
         self.__sequence_id = 0
         self.__address = host
         self.__lock = RLock()
@@ -21,31 +19,31 @@ class ProcessRegistry:
         return self.__address
 
     @address.setter
-    def address(self, address:str):
+    def address(self, address: str):
         self.__address = address
 
-    def get(self, pid:PID) -> AbstractProcess:
+    def get(self, pid: 'PID') -> process.AbstractProcess:
         if pid.address != self.__address:
             for resolver in self._hostResolvers:
                 reff = resolver(pid)
-                if not reff:
+                if reff is None:
                     continue
 
                 pid.process = reff
                 return reff
 
         ref = self.__local_actor_refs.get(pid.id, None)
-        if ref:
+        if ref is not None:
             return ref
 
-        return DeadLettersProcess()
+        return process.DeadLettersProcess()
 
-    def add(self, id:str, ref:AbstractProcess) -> PID:
-        pid = PID(address=self.address, id=id, ref=ref)
+    def add(self, id: str, ref: process.AbstractProcess) -> 'PID':
+        _pid = pid_.PID(address=self.address, id=id, ref=ref)
         self.__local_actor_refs[id] = ref
-        return pid
+        return _pid
 
-    def remove(self, pid):
+    def remove(self, pid: 'PID'):
         self.__local_actor_refs.pop(pid.id)
 
     def next_id(self) -> str:

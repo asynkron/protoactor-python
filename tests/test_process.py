@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 from protoactor.process import LocalProcess, EventStream, DeadLetterEvent
-from protoactor.mailbox import MailBox
-from protoactor.messages import MessageSender
+from protoactor.mailbox.mailbox import Mailbox
+from protoactor.message_sender import MessageSender
 
 
 def test_get_mailbox_property():
-    mailbox = MailBox()
+    mailbox = Mailbox()
     lp = LocalProcess(mailbox)
 
     assert lp.mailbox == mailbox
 
 
 def test_send_user_message():
-    mailbox = MailBox()
+    mailbox = Mailbox()
     mailbox.post_user_message = Mock()
 
     lp = LocalProcess(mailbox)
@@ -26,7 +26,7 @@ def test_send_user_message():
 
 
 def test_send_user_message():
-    mailbox = MailBox()
+    mailbox = Mailbox()
     mailbox.post_system_message = Mock()
 
     lp = LocalProcess(mailbox)
@@ -37,7 +37,7 @@ def test_send_user_message():
 
 
 def test_send_user_message_with_sender():
-    mailbox = MailBox()
+    mailbox = Mailbox()
     mailbox.post_user_message = Mock()
 
     lp = LocalProcess(mailbox)

@@ -1,12 +1,12 @@
-from .pid import PID
+from . import pid
 
 class MessageSender:
-    def __init__(self, message: object, sender: PID) -> None:
+    def __init__(self, message: object, sender: pid.PID) -> None:
         self.__message = message
-        self.__sender= sender
+        self.__sender = sender
 
     @property
-    def sender(self) -> PID:
+    def sender(self) -> pid.PID:
         return self.__sender
 
     @property

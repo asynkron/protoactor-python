@@ -3,21 +3,22 @@
 import pytest
 import unittest
 from datetime import timedelta, datetime
-from mock import Mock
+from unittest.mock import Mock
 from protoactor.supervision import OneOfOneStrategy, SupervisorDirective, Supervisor
 from protoactor.pid import PID
 from protoactor.process_registry import ProcessRegistry
 from protoactor.restart_statistics import RestartStatistics
 from protoactor.process import LocalProcess
-from protoactor.mailbox import MailBox
-from protoactor.messages import ResumeMailbox, Restart, Stop
+from protoactor.mailbox.mailbox import Mailbox
+from protoactor.mailbox.messages import ResumeMailbox
+from protoactor.messages import Restart, Stop
 
 @pytest.fixture(scope='module', )
 def supervisor_data():
     supervisor = Supervisor()
-    mailbox = MailBox()
+    mailbox = Mailbox()
     local_process = LocalProcess(mailbox)
-    pid_child = PID(address='address', id='id', aref=local_process)
+    pid_child = PID(address='address', id='id', ref=local_process)
     restart_statistic = RestartStatistics(5, datetime(2017, 2, 15))
 
     return {

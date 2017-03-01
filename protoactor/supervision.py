@@ -1,11 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
+from . import messages, pid, process, process_registry, restart_statistics
 from .mailbox.messages import ResumeMailbox
-from .messages import Restart, Stop
-from .pid import PID
-from .process import AbstractProcess
-from .process_registry import ProcessRegistry
-from .restart_statistics import RestartStatistics
 
 
 class SupervisorDirective:
@@ -22,7 +18,8 @@ class Supervisor:
 
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
-    def handle_failure(self, supervisor, child: PID, rs_stats: RestartStatistics, reason: Exception, message: object):
+    def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
+                       reason: Exception, message: object):
         raise NotImplementedError("Should Implement this method")
 
 
@@ -32,10 +29,11 @@ class OneOfOneStrategy(AbstractSupervisorStrategy):
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
 
-    def __get_pid_aref(self, pid: PID) -> AbstractProcess:
-        return pid.process if pid.process is not None else ProcessRegistry().get(pid)
+    def __get_pid_aref(self, pid: pid.PID) -> process.AbstractProcess:
+        return pid.process if pid.process is not None else process_registry.ProcessRegistry().get(pid)
 
-    def handle_failure(self, supervisor, child: PID, rs_stats: RestartStatistics, reason: Exception, message: object):
+    def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
+                       reason: Exception, message: object):
         directive = self.__decider(child, reason)
 
         if directive == SupervisorDirective.Resume:
@@ -47,16 +45,16 @@ class OneOfOneStrategy(AbstractSupervisorStrategy):
             pid_aref = self.__get_pid_aref(child)
             if rs_stats.request_restart_permission(self.__max_retries_number, self.__within_timedelta):
                 # TODO: Log console "Restarting {child.ToShortString()} Reason {exc_cause}"
-                pid_aref.send_system_message(child, Restart())
+                pid_aref.send_system_message(child, messages.Restart())
             else:
                 # TODO: Log console Stopping {child.ToShortString()} Reason { exc_cause}"
-                pid_aref.send_system_message(child, Stop())
+                pid_aref.send_system_message(child, messages.Stop())
             return
 
         if directive == SupervisorDirective.Stop:
             # TODO: Log console Stopping {child.ToShortString()} Reason { exc_cause}"
             pid_aref = self.__get_pid_aref(child)
-            pid_aref.send_system_message(child, Stop())
+            pid_aref.send_system_message(child, messages.Stop())
             return
 
         if directive == SupervisorDirective.Escalate:

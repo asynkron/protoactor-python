@@ -1,34 +1,31 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable
 
-from .process_registry import ProcessRegistry
-from .props import Props
-from .context import AbstractContext
-from .pid import PID
+from . import process_registry, props, context, pid
 
 class Actor(metaclass=ABCMeta):
     @abstractmethod
-    async def receive(self, context: AbstractContext) -> None:
+    async def receive(self, context: context.AbstractContext) -> None:
         pass
 
 
-def from_producer(producer: Callable[[], Actor]) -> Props:
-    return Props(producer=producer)
+def from_producer(producer: Callable[[], Actor]) -> 'Props':
+    return props.Props(producer=producer)
 
 
-def from_func(receive) -> Props:
+def from_func(receive) -> 'Props':
     pass
 
 
-def spawn(props: Props) -> PID:
-    return props.spawn(ProcessRegistry().next_id())
+def spawn(props: 'Props') -> pid.PID:
+    return props.spawn(process_registry.ProcessRegistry().next_id())
 
 
-def spawn_prefix(props, prefix: str):
+def spawn_prefix(props: 'Props', prefix: str):
     pass
 
 
-def spawn_named(props, name: str):
+def spawn_named(props: 'Props', name: str):
     pass
 
 
