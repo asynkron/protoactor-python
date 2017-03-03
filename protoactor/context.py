@@ -33,19 +33,20 @@ class AbstractContext(metaclass=ABCMeta):
         self.__actor = actor
 
     @property
-    @abstractproperty
     def sender(self) -> pid.PID:
-        raise NotImplementedError("Should Implement this method")
+        return self.__sender
 
     @property
-    @abstractproperty
     def message(self) -> object:
-        raise NotImplementedError("Should Implement this method")
+        return self.__message
 
     @property
-    @abstractproperty
     def receive_timeout(self) -> timedelta:
-        raise NotImplementedError("Should Implement this method")
+        return self.__receive_timeout
+
+    @receive_timeout.setter
+    def receive_timeout(self, timeout: timedelta) -> None:
+        self._receive_timeout = timeout
 
     @property
     @abstractproperty
@@ -110,6 +111,8 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive = None
         self.__restart_statistics = None
 
+        self.__receive_timeout = timedelta(milliseconds=0)
+
         self.__behaviour = []
         self.__incarnate_actor()
 
@@ -144,18 +147,6 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
     @property
     def stash(self):
-        raise NotImplementedError("Should Implement this method")
-
-    @property
-    def sender(self) -> pid.PID:
-        raise NotImplementedError("Should Implement this method")
-
-    @property
-    def message(self) -> object:
-        raise NotImplementedError("Should Implement this method")
-
-    @property
-    def receive_timeout(self) -> timedelta:
         raise NotImplementedError("Should Implement this method")
 
     @property
@@ -199,7 +190,17 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
             self.escalate_failure(e, message)
 
     async def invoke_user_message(self, message: object) -> None:
-        raise NotImplementedError("Should Implement this method")
+        influence_timeout = True
+        if self.receive_timeout > timedelta(milliseconds=0):
+            influence_timeout = not isinstance(message, messages.NotInfluenceReceiveTimeout)
+            if influence_timeout is True:
+                self._stop_receive_timeout()
+
+        await self._process_message(message)
+
+        if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
+            self._reset_receive_timeout()
+
 
     def escalate_failure(self, reason: Exception, message: object) -> None:
         if not self.__restart_statistics:
@@ -233,3 +234,20 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def __try_restart_or_terminate(self):
         raise NotImplementedError("Should Implement this method")
 
+    def _stop_receive_timeout(self):
+        raise NotImplementedError("Should Implement this method")
+
+    def _reset_receive_timeout(self):
+        raise NotImplementedError("Should Implement this method")
+
+    async def _process_message(self, message: object) -> None:
+        self.__message = message
+
+        if self.__middleware is not None:
+            await self.__middleware(self)
+        elif isinstance(message, messages.PoisonPill) is True:
+            self.my_self.stop()
+        else:
+            await self.__receive(self)
+
+        self.__message = None

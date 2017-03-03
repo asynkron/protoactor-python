@@ -70,3 +70,6 @@ class Started(AbstractSystemMessage):
 
 class ReceiveTimeout(AbstractSystemMessage):
     pass
+
+class NotInfluenceReceiveTimeout(AbstractSystemMessage):
+    pass
