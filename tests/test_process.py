@@ -7,40 +7,50 @@ from protoactor.mailbox.mailbox import Mailbox
 from protoactor.message_sender import MessageSender
 
 
-def test_get_mailbox_property():
-    mailbox = Mailbox()
-    lp = LocalProcess(mailbox)
+@pytest.fixture(scope='module', )
+def process_data():
+    mailbox = Mailbox(None, None, None, None)
+    local_process = LocalProcess(mailbox)
+
+    return {
+        'mailbox': mailbox,
+        'local_process': local_process,
+    }
+
+def test_get_mailbox_property(process_data):
+    mailbox = process_data['mailbox']
+    lp = process_data['local_process']
 
     assert lp.mailbox == mailbox
 
 
-def test_send_user_message():
-    mailbox = Mailbox()
-    mailbox.post_user_message = Mock()
+def test_send_user_message(process_data):
+    mailbox = process_data['mailbox']
+    lp = process_data['local_process']
 
-    lp = LocalProcess(mailbox)
+    mailbox.post_user_message = Mock()
     lp.send_user_message(1, "message")
     mess = mailbox.post_user_message.call_args[0][0]
 
     assert mess == "message"
 
 
-def test_send_user_message():
-    mailbox = Mailbox()
-    mailbox.post_system_message = Mock()
+def test_send_user_message(process_data):
+    mailbox = process_data['mailbox']
+    lp = process_data['local_process']
 
-    lp = LocalProcess(mailbox)
+    mailbox.post_system_message = Mock()
     lp.send_system_message(1, "message")
     mess = mailbox.post_system_message.call_args[0][0]
 
     assert mess == "message"
 
 
-def test_send_user_message_with_sender():
-    mailbox = Mailbox()
-    mailbox.post_user_message = Mock()
+def test_send_user_message_with_sender(process_data):
+    mailbox = process_data['mailbox']
+    lp = process_data['local_process']
 
-    lp = LocalProcess(mailbox)
+    mailbox.post_user_message = Mock()
     lp.send_user_message(1, "message", "sender")
     mess = mailbox.post_user_message.call_args[0][0]
 

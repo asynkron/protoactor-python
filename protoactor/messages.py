@@ -1,6 +1,6 @@
 from abc import ABCMeta
 
-from. import pid, restart_statistics
+from. import pid, restart_statistics, utils
 
 
 class AbstractSystemMessage(metaclass=ABCMeta):
@@ -15,10 +15,12 @@ class Terminated(AbstractSystemMessage):
     pass
 
 
+@utils.singleton
 class Restarting:
     pass
 
 
+@utils.singleton
 class Restart(AbstractSystemMessage):
     pass
 
@@ -51,22 +53,22 @@ class Unwatch(AbstractSystemMessage):
     def __init__(self, watcher: pid.PID) -> None:
         self.watcher = watcher
 
-
+@utils.singleton
 class Stop(AbstractSystemMessage):
     pass
 
-
+@utils.singleton
 class Stopping(AutoReceiveMessage):
     pass
 
-
+@utils.singleton
 class Stopped(AutoReceiveMessage):
     pass
 
-
+@utils.singleton
 class Started(AbstractSystemMessage):
     pass
 
-
+@utils.singleton
 class ReceiveTimeout(AbstractSystemMessage):
     pass

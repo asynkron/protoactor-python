@@ -12,11 +12,12 @@ from protoactor.process import LocalProcess
 from protoactor.mailbox.mailbox import Mailbox
 from protoactor.mailbox.messages import ResumeMailbox
 from protoactor.messages import Restart, Stop
+import queue
 
 @pytest.fixture(scope='module', )
 def supervisor_data():
     supervisor = Supervisor()
-    mailbox = Mailbox()
+    mailbox = Mailbox(None, None, None, None)
     local_process = LocalProcess(mailbox)
     pid_child = PID(address='address', id='id', ref=local_process)
     restart_statistic = RestartStatistics(5, datetime(2017, 2, 15))
