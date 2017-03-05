@@ -71,7 +71,7 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn_named(self, propertiess: 'Props', name: str) -> pid.PID:
+    def spawn_named(self, properties: 'Props', name: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
