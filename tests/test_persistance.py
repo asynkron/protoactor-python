@@ -1,5 +1,5 @@
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 import asyncio
 from protoactor.persistence import InMemoryProviderState
 

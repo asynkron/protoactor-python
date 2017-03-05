@@ -3,7 +3,7 @@ from asyncio import Task
 from typing import Dict, Optional, Callable
 from uuid import uuid4
 
-from . import utils, invoker, message_sender, pid
+from . import utils, invoker, message_sender, pid, messages
 from .mailbox import mailbox
 
 
@@ -16,12 +16,11 @@ class AbstractProcess(metaclass=ABCMeta):
     def send_system_message(self, pid: 'PID', message: object):
         raise NotImplementedError('Should implement this method')
 
-    @abstractmethod
-    def stop(self):
-        raise NotImplementedError('Should implement this method')
+    def stop(self, pid: 'PID') -> None:
+        self.send_system_message(pid, messages.Stop())
 
 
-class LocalProcess(AbstractProcess, invoker.AbstractInvoker):
+class LocalProcess(AbstractProcess):
     def __init__(self, mailbox: mailbox.AbstractMailbox) -> None:
         self.__mailbox = mailbox
 
@@ -38,23 +37,8 @@ class LocalProcess(AbstractProcess, invoker.AbstractInvoker):
     def send_system_message(self, pid: 'PID', message: object):
         self.__mailbox.post_system_message(message)
 
-    def stop(self):
-        raise NotImplementedError("Should Implement this method")
-
-    def invoke_system_message(self, message: object) -> Task:
-        raise NotImplementedError("Should Implement this method")
-
-    def invoke_user_message(self, message: object) -> Task:
-        pass
-
-    def escalate_failure(self, reason: Exception, message: object):
-        raise NotImplementedError("Should Implement this method")
-
 
 class DeadLettersProcess(AbstractProcess):
-    def stop(self):
-        raise NotImplementedError("Should Implement this method")
-
     def send_system_message(self, pid: 'PID', message: object):
         EventStream().publish(DeadLetterEvent(pid, message, None))
 

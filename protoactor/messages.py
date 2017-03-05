@@ -72,3 +72,6 @@ class Started(AbstractSystemMessage):
 @utils.singleton
 class ReceiveTimeout(AbstractSystemMessage):
     pass
+
+class NotInfluenceReceiveTimeout(AbstractSystemMessage):
+    pass

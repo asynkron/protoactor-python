@@ -1,7 +1,7 @@
 from asyncio import Task
 from typing import Callable, List
 
-from . import actor, context, dispatcher, invoker, messages, pid, process, process_registry, supervision
+from . import context, dispatcher, invoker, messages, pid, process, process_registry, supervision
 from .mailbox import mailbox, queue
 
 
@@ -24,7 +24,7 @@ def default_mailbox_producer(invoker: invoker.AbstractInvoker, dispatcher: 'Abst
 
 
 class Props:
-    def __init__(self, producer: Callable[[], actor.Actor] = None,
+    def __init__(self, producer: Callable[[], 'Actor'] = None,
                  spawner: Callable[[str, 'Props', pid.PID], pid.PID] = default_spawner,
                  mailbox_producer: Callable[
                      [invoker.AbstractInvoker,
@@ -42,7 +42,7 @@ class Props:
         self.__middleware_chain = middleware_chain
 
     @property
-    def producer(self) -> Callable[[], actor.Actor]:
+    def producer(self) -> Callable[[], 'Actor']:
         return self.__producer
 
     @property
@@ -54,6 +54,10 @@ class Props:
         return self.__supervisor_strategy
 
     @property
+    def middleware(self) -> List[Callable[[context.AbstractContext], Task]]:
+        return self.__middleware
+
+    @property
     def middleware_chain(self):
         return self.__middleware_chain
 
@@ -61,7 +65,7 @@ class Props:
     def dispatcher(self):
         return self.__dispatcher
 
-    def with_producer(self, producer: Callable[[], actor.Actor]) -> 'Props':
+    def with_producer(self, producer: Callable[[], 'Actor']) -> 'Props':
         return self.__copy_with({'_Props__producer': producer})
 
     def with_dispatcher(self, dispatcher: 'AbstractDispatcher') -> 'Props':

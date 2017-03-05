@@ -20,6 +20,12 @@ def test_id(mocked_pid):
     assert mocked_pid.id == "sample_id"
 
 
+def test_process(mocked_pid):
+    _process = mock.Mock()
+    mocked_pid.process = _process
+    assert mocked_pid.process == _process
+
+
 def test_tell(mocked_pid):
     message = "test_message"
     mocked_pid.tell(message)
@@ -35,3 +41,7 @@ def test_send_system_message(mocked_pid):
 def test_stop(mocked_pid):
     mocked_pid.stop()
     mocked_pid.process.stop.assert_called_once_with()
+
+
+def test_repr(mocked_pid):
+    return str(mocked_pid) == "{} / {}".format(mocked_pid.address, mocked_pid.id)
