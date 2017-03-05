@@ -41,7 +41,11 @@ def test_handle_failure_resume_directive(supervisor_data):
     one_of_one = OneOfOneStrategy(decider, 10, timedelta(seconds = 20))
     one_of_one.handle_failure(supervisor_data['supervisor'], supervisor_data['pid_child'], supervisor_data['restart_statistic'], exc)
 
-    supervisor_data['local_process'].send_system_message.assert_called_once_with(supervisor_data['pid_child'], ResumeMailbox())
+
+    supervisor_data['local_process'].send_system_message.assert_called_once()
+    (called_pid, called_message), _ = supervisor_data['local_process'].send_system_message.call_args
+    assert called_pid == supervisor_data['pid_child']
+    assert isinstance(called_message, ResumeMailbox) is True
 
 def test_handle_failure_restart_directive_can_restart(supervisor_data):
     supervisor_data['local_process'].send_system_message = Mock()
@@ -56,7 +60,10 @@ def test_handle_failure_restart_directive_can_restart(supervisor_data):
     one_of_one = OneOfOneStrategy(decider, 10, timedelta(seconds = 20))
     one_of_one.handle_failure(supervisor_data['supervisor'], supervisor_data['pid_child'], supervisor_data['restart_statistic'], exc)
 
-    supervisor_data['local_process'].send_system_message.assert_called_once_with(supervisor_data['pid_child'], Restart())
+    supervisor_data['local_process'].send_system_message.assert_called_once()
+    (called_pid, called_message), _ = supervisor_data['local_process'].send_system_message.call_args
+    assert called_pid == supervisor_data['pid_child']
+    assert isinstance(called_message, Restart) is True
 
 def test_handle_failure_restart_directive_cant_restart(supervisor_data):
     supervisor_data['local_process'].send_system_message = Mock()
@@ -71,8 +78,10 @@ def test_handle_failure_restart_directive_cant_restart(supervisor_data):
     one_of_one = OneOfOneStrategy(decider, 10, timedelta(seconds = 20))
     one_of_one.handle_failure(supervisor_data['supervisor'], supervisor_data['pid_child'], supervisor_data['restart_statistic'], exc)
 
-    supervisor_data['local_process'].send_system_message.assert_called_once_with(supervisor_data['pid_child'], Stop())
-
+    supervisor_data['local_process'].send_system_message.assert_called_once()
+    (called_pid, called_message), _ = supervisor_data['local_process'].send_system_message.call_args
+    assert called_pid == supervisor_data['pid_child']
+    assert isinstance(called_message, Stop) is True
 
 def test_handle_failure_stop_directive(supervisor_data):
     supervisor_data['local_process'].send_system_message = Mock()
@@ -83,8 +92,9 @@ def test_handle_failure_stop_directive(supervisor_data):
     one_of_one = OneOfOneStrategy(decider, 10, timedelta(seconds = 20))
     one_of_one.handle_failure(supervisor_data['supervisor'], supervisor_data['pid_child'], supervisor_data['restart_statistic'], exc)
 
-    supervisor_data['local_process'].send_system_message.assert_called_once_with(supervisor_data['pid_child'], Stop())
-
+    (called_pid, called_message), _ = supervisor_data['local_process'].send_system_message.call_args
+    assert called_pid == supervisor_data['pid_child']
+    assert isinstance(called_message, Stop) is True
 
 def test_handle_failure_escalate_directive(supervisor_data):
     supervisor_data['local_process'].send_system_message = Mock()
