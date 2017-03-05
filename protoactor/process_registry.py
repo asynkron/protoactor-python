@@ -1,5 +1,4 @@
 from multiprocessing import RLock
-from typing import Dict
 
 from . import utils, pid as pid_, process
 

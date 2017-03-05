@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from asyncio import Task
 from datetime import timedelta
-from typing import Callable, List, Set
+from typing import Callable, Set
 
-from . import actor, invoker, messages, pid, props, restart_statistics
+from . import invoker, messages, pid, restart_statistics
 from .mailbox import messages as mailbox_msg
 
 
@@ -208,7 +208,6 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
         if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
             self._reset_receive_timeout()
-
 
     def escalate_failure(self, reason: Exception, message: object) -> None:
         if not self.__restart_statistics:
