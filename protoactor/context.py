@@ -63,15 +63,15 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn(self, properties: 'Props') -> pid.PID:
+    def spawn(self, props: 'Props') -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn_prefix(self, properties: 'Props', prefix: str) -> pid.PID:
+    def spawn_prefix(self, props: 'Props', prefix: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn_named(self, properties: 'Props', name: str) -> pid.PID:
+    def spawn_named(self, props: 'Props', name: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -125,7 +125,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def unwatch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
 
-    def spawn(self, properties: 'Props') -> pid.PID:
+    def spawn(self, props: 'Props') -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     def set_behavior(self, receive: Callable[['Actor', AbstractContext], Task]):
@@ -136,13 +136,13 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def respond(self, message: object):
         raise NotImplementedError("Should Implement this method")
 
-    def spawn_named(self, properties: 'Props', name: str) -> pid.PID:
+    def spawn_named(self, props: 'Props', name: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     def push_behavior(self, behavior: Callable[['Actor', AbstractContext], Task]):
         raise NotImplementedError("Should Implement this method")
 
-    def spawn_prefix(self, properties: 'Props', prefix: str) -> pid.PID:
+    def spawn_prefix(self, props: 'Props', prefix: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @property
