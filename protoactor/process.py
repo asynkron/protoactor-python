@@ -24,6 +24,10 @@ class LocalProcess(AbstractProcess):
     def __init__(self, mailbox: mailbox.AbstractMailbox) -> None:
         self.__mailbox = mailbox
 
+    @property
+    def mailbox(self) -> mailbox.AbstractMailbox:
+        return self.__mailbox
+
     def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
         if sender:
             self.__mailbox.post_user_message(message_sender.MessageSender(message, sender))

@@ -19,7 +19,7 @@ class Supervisor:
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
     def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
-                       reason: Exception, message: object):
+                       reason: Exception):
         raise NotImplementedError("Should Implement this method")
 
 
@@ -33,7 +33,7 @@ class OneOfOneStrategy(AbstractSupervisorStrategy):
         return pid.process if pid.process is not None else process_registry.ProcessRegistry().get(pid)
 
     def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
-                       reason: Exception, message: object):
+                       reason: Exception):
         directive = self.__decider(child, reason)
 
         if directive == SupervisorDirective.Resume:

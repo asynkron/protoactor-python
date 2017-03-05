@@ -40,7 +40,7 @@ def test_send_system_message(mocked_pid):
 
 def test_stop(mocked_pid):
     mocked_pid.stop()
-    mocked_pid.process.stop.assert_called_once()
+    mocked_pid.process.stop.assert_called_once_with()
 
 
 def test_repr(mocked_pid):

@@ -153,6 +153,14 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def children(self) -> Set[pid.PID]:
         raise NotImplementedError("Should Implement this method")
 
+    @property
+    def watchers(self) -> Set[pid.PID]:
+        raise NotImplementedError("Should Implement this method")
+
+    @property
+    def watching(self) -> Set[pid.PID]:
+        raise NotImplementedError("Should Implement this method")
+
     # def __actor_receive(self, context: AbstractContext):
     #     return self.actor.receive(context)
 
@@ -216,14 +224,20 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
         await self.__try_restart_or_terminate()
 
-    async def __handle_terminated(self):
-        raise NotImplementedError("Should Implement this method")
+    async def __handle_terminated(self, message: object):
+        self.children.remove(message.who)
+        self.watching.remove(message.who)
+        await self.invoke_user_message(message)
+        await self.__try_restart_or_terminate()
 
     async def __handle_watch(self, message: object):
-        raise NotImplementedError("Should Implement this method")
+        if self.watchers is None:
+            self.watchers = Set()
+        self.watchers.add(message)
 
     async def __handle_unwatch(self, message: object):
-        raise NotImplementedError("Should Implement this method")
+        if self.watchers is not None:
+            self.watchers.remove(message)
 
     async def __handle_failure(self, message: object):
         raise NotImplementedError("Should Implement this method")
