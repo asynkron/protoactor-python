@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from asyncio import Task
 from datetime import timedelta
-from typing import Callable, List, Set
+from typing import Callable, Set
 
-from . import actor, invoker, messages, pid, props, restart_statistics
+from . import invoker, messages, pid, restart_statistics
 from .mailbox import messages as mailbox_msg
 
 
@@ -63,15 +63,15 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn(self, props: 'Props') -> pid.PID:
+    def spawn(self, properties: 'Props') -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn_prefix(self, props: 'Props', prefix: str) -> pid.PID:
+    def spawn_prefix(self, properties: 'Props', prefix: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def spawn_named(self, props: 'Props', name: str) -> pid.PID:
+    def spawn_named(self, propertiess: 'Props', name: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -125,7 +125,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def unwatch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
 
-    def spawn(self, props: 'Props') -> pid.PID:
+    def spawn(self, properties: 'Props') -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     def set_behavior(self, receive: Callable[['Actor', AbstractContext], Task]):
@@ -136,13 +136,13 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def respond(self, message: object):
         raise NotImplementedError("Should Implement this method")
 
-    def spawn_named(self, props: 'Props', name: str) -> pid.PID:
+    def spawn_named(self, properties: 'Props', name: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     def push_behavior(self, behavior: Callable[['Actor', AbstractContext], Task]):
         raise NotImplementedError("Should Implement this method")
 
-    def spawn_prefix(self, props: 'Props', prefix: str) -> pid.PID:
+    def spawn_prefix(self, properties: 'Props', prefix: str) -> pid.PID:
         raise NotImplementedError("Should Implement this method")
 
     @property
@@ -208,7 +208,6 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
         if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
             self._reset_receive_timeout()
-
 
     def escalate_failure(self, reason: Exception, message: object) -> None:
         if not self.__restart_statistics:
