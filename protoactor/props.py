@@ -29,7 +29,7 @@ class Props:
                  mailbox_producer: Callable[
                      [invoker.AbstractInvoker,
                       'AbstractDispatcher'], mailbox.AbstractMailbox] = default_mailbox_producer,
-                 dispatcher: 'AbstractDispatcher' = dispatcher.ProcessDispatcher(),
+                 dispatcher: 'AbstractDispatcher' = dispatcher.ThreadDispatcher(),
                  supervisor_strategy: supervision.AbstractSupervisorStrategy = None,
                  middleware: List[Callable[[context.AbstractContext], Task]] = None,
                  middleware_chain: Callable[[context.AbstractContext], Task] = None) -> None:

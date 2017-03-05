@@ -40,13 +40,17 @@ class AbstractContext(metaclass=ABCMeta):
     def message(self) -> object:
         return self.__message
 
+    @message.setter
+    def message(self, message: object) -> None:
+        self.__message = message
+
     @property
     def receive_timeout(self) -> timedelta:
         return self.__receive_timeout
 
     @receive_timeout.setter
     def receive_timeout(self, timeout: timedelta) -> None:
-        self._receive_timeout = timeout
+        self.__receive_timeout = timeout
 
     @property
     @abstractproperty
@@ -94,10 +98,6 @@ class AbstractContext(metaclass=ABCMeta):
     def unwatch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
 
-    @abstractmethod
-    def __incarnate_actor(self):
-        raise NotImplementedError("Should Implement this method")
-
 
 class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: pid.PID) -> None:
@@ -111,7 +111,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive = None
         self.__restart_statistics = None
 
-        self.__receive_timeout = timedelta(milliseconds=0)
+        self.receive_timeout = timedelta(milliseconds=0)
 
         self.__behaviour = []
         self.__incarnate_actor()
@@ -255,7 +255,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         raise NotImplementedError("Should Implement this method")
 
     async def _process_message(self, message: object) -> None:
-        self.__message = message
+        self.message = message
 
         if self.__middleware is not None:
             await self.__middleware(self)
@@ -264,4 +264,4 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         else:
             await self.__receive(self)
 
-        self.__message = None
+        self.message = None
