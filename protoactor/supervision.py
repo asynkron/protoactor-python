@@ -23,7 +23,7 @@ class AbstractSupervisorStrategy(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
 
-class OneOfOneStrategy(AbstractSupervisorStrategy):
+class OneForOneStrategy(AbstractSupervisorStrategy):
     def __init__(self, decider, max_retries_number, within_timedelta):
         self.__decider = decider
         self.__max_retries_number = max_retries_number

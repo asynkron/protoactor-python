@@ -1,7 +1,7 @@
 from .actor import Actor
 from abc import ABCMeta, abstractmethod
-from typing import List, Callable, Tuple, Any
-import asyncio 
+from typing import Callable, Tuple, Any
+
 
 class Persistent():
     def __init__(self):
@@ -9,10 +9,10 @@ class Persistent():
         self.event_index = None
         self.context = None
         self.recovering = None
-    
+
     @property
     def name(self):
-        return self.context.self.id
+        return self.context.my_self.id
 
     # @asyncio.coroutine
     # def init(self, provider, context):
@@ -26,17 +26,18 @@ class Persistent():
     #         self.event_index = snapshot.[1]
     #         #context.receive(snapshot[0])
 
-    #     def 
-        
+    #     def
+
     #     yield from state.get_events(self.name, )
 
 
-class PersistentActor (Actor):
+class PersistentActor(Actor):
     @abstractmethod
-    def persistence () -> 'Persistance':
+    def persistence() -> 'Persistance':
         raise NotImplementedError('Should implement this method')
 
-class Provider (metaclass=ABCMeta):
+
+class Provider(metaclass=ABCMeta):
     @abstractmethod
     def get_state() -> 'ProviderState':
         raise NotImplementedError('Should implement this method')
@@ -53,7 +54,7 @@ class ProviderState(metaclass=ABCMeta):
     @abstractmethod
     def get_snapshot_interval(self) -> int:
         raise NotImplementedError('Should implement this method')
-    
+
     @abstractmethod
     async def persist_event(self, actor_name: str, event_index: int, event: Any) -> None:
         raise NotImplementedError('Should implement this method')
@@ -71,12 +72,13 @@ class InMemoryProvider(Provider):
     def get_state(self) -> ProviderState:
         return InMemoryProviderState()
 
-class InMemoryProviderState (ProviderState):
+
+class InMemoryProviderState(ProviderState):
     def __init__(self) -> None:
         self.__events = {}
         self.__snapshots = {}
 
-    def restart (self) -> None:
+    def restart(self) -> None:
         pass
 
     def get_snapshot_interval(self) -> int:

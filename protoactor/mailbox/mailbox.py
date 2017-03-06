@@ -58,8 +58,8 @@ class Mailbox(AbstractMailbox):
             self.__dispatcher.schedule(self.__run)
 
     async def __run(self):
-        while self.__system_messages_queue.has_messages() or (
-            not self.__suspended and self.__user_messages_queue.has_messages()):
+        while self.__system_messages_queue.has_messages() or \
+                (not self.__suspended and self.__user_messages_queue.has_messages()):
             await self.__process_messages()
             await sleep(0)
 

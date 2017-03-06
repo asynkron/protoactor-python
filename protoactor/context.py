@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from asyncio import Task
 from datetime import timedelta
-from typing import Callable, List, Set
+from typing import Callable, Set
 
-from . import actor, invoker, messages, pid, props, restart_statistics
+from . import invoker, messages, pid, restart_statistics
 from .mailbox import messages as mailbox_msg
 
 
@@ -40,17 +40,13 @@ class AbstractContext(metaclass=ABCMeta):
     def message(self) -> object:
         return self.__message
 
-    @message.setter
-    def message(self, message: object) -> None:
-        self.__message = message
-
     @property
     def receive_timeout(self) -> timedelta:
         return self.__receive_timeout
 
     @receive_timeout.setter
     def receive_timeout(self, timeout: timedelta) -> None:
-        self.__receive_timeout = timeout
+        self._receive_timeout = timeout
 
     @property
     @abstractproperty
@@ -98,6 +94,10 @@ class AbstractContext(metaclass=ABCMeta):
     def unwatch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
 
+    @abstractmethod
+    def __incarnate_actor(self):
+        raise NotImplementedError("Should Implement this method")
+
 
 class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: pid.PID) -> None:
@@ -111,7 +111,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive = None
         self.__restart_statistics = None
 
-        self.receive_timeout = timedelta(milliseconds=0)
+        self.__receive_timeout = timedelta(milliseconds=0)
 
         self.__behaviour = []
         self.__incarnate_actor()
@@ -208,7 +208,6 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
         if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
             self._reset_receive_timeout()
-
 
     def escalate_failure(self, reason: Exception, message: object) -> None:
         if not self.__restart_statistics:
