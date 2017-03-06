@@ -1,6 +1,6 @@
 from abc import ABCMeta
 
-from. import pid, restart_statistics, utils
+from. import pid, restart_statistics
 
 
 class AbstractSystemMessage(metaclass=ABCMeta):

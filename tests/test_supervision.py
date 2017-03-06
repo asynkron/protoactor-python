@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pytest
-import unittest
 from datetime import timedelta, datetime
 from unittest.mock import Mock
-from protoactor.supervision import OneForOneStrategy, SupervisorDirective, Supervisor
-from protoactor.pid import PID
-from protoactor.process_registry import ProcessRegistry
-from protoactor.restart_statistics import RestartStatistics
-from protoactor.process import LocalProcess
+
+import pytest
+
 from protoactor.mailbox.mailbox import Mailbox
 from protoactor.mailbox.messages import ResumeMailbox
 from protoactor.messages import Restart, Stop
-import queue
+from protoactor.pid import PID
+from protoactor.process import LocalProcess
+from protoactor.restart_statistics import RestartStatistics
+from protoactor.supervision import OneForOneStrategy, SupervisorDirective, Supervisor
+
 
 @pytest.fixture(scope='module', )
 def supervisor_data():
