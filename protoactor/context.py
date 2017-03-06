@@ -254,7 +254,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         raise NotImplementedError("Should Implement this method")
 
     async def _process_message(self, message: object) -> None:
-        self.__message = message
+        self.message = message
 
         if self.__middleware is not None:
             await self.__middleware(self)
@@ -263,4 +263,4 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         else:
             await self.__receive(self)
 
-        self.__message = None
+        self.message = None
