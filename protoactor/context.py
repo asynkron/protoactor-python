@@ -95,7 +95,7 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def __incarnate_actor(self):
+    def _incarnate_actor(self):
         raise NotImplementedError("Should Implement this method")
 
 
@@ -114,7 +114,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive_timeout = timedelta(milliseconds=0)
 
         self.__behaviour = []
-        self.__incarnate_actor()
+        self._incarnate_actor()
 
     def watch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
@@ -164,7 +164,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     # def __actor_receive(self, context: AbstractContext):
     #     return self.actor.receive(context)
 
-    def __incarnate_actor(self):
+    def _incarnate_actor(self):
         self.__restarting = False
         self.__stopping = False
         self.actor = self.__producer()
