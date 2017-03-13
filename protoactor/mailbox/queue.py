@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABCMeta
-from asyncio import Queue, QueueEmpty
+import queue
 from typing import Optional
 
 
@@ -19,12 +19,12 @@ class AbstractQueue(metaclass=ABCMeta):
 
 class UnboundedMailboxQueue(AbstractQueue):
     def __init__(self):
-        self.__messages = Queue()
+        self.__messages = queue.Queue()
 
     def pop(self) -> Optional[object]:
         try:
             return self.__messages.get_nowait()
-        except QueueEmpty:
+        except queue.Empty:
             return None
 
     def push(self, message: object):

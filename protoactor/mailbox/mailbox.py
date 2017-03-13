@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from asyncio import sleep
+from threading import RLock
 from enum import Enum
 from typing import Optional
 
@@ -37,6 +38,7 @@ class Mailbox(AbstractMailbox):
         self.__dispatcher = dispatcher
         self.__status = MailBoxStatus.IDLE
         self.__suspended = False
+        self.__status_lock = RLock()
 
     def post_system_message(self, message: object):
         self.__system_messages_queue.push(message)
@@ -53,19 +55,23 @@ class Mailbox(AbstractMailbox):
             stats.mailbox_stated()
 
     def __schedule(self):
-        if self.__status == MailBoxStatus.IDLE:
-            self.__status = MailBoxStatus.BUSY
-            self.__dispatcher.schedule(self.__run)
+        with self.__status_lock:
+            if self.__status == MailBoxStatus.IDLE:
+                self.__status = MailBoxStatus.BUSY
+                self.__dispatcher.schedule(self.__run)
 
     async def __run(self):
-        while self.__system_messages_queue.has_messages() or \
-                (not self.__suspended and self.__user_messages_queue.has_messages()):
+        while True:
+            with self.__status_lock:
+                if not self.__system_messages_queue.has_messages() and \
+                        (self.__suspended or not self.__user_messages_queue.has_messages()):
+                    self.__status = MailBoxStatus.IDLE
+                    for stats in self.__statistics:
+                        stats.mailbox_empty()
+                    return
+
             await self.__process_messages()
             await sleep(0)
-
-        self.__status = MailBoxStatus.IDLE
-        for stats in self.__statistics:
-            stats.mailbox_empty()
 
     async def __process_messages(self):
         throughput = self.__dispatcher.throughput

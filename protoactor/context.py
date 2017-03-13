@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 from asyncio import Task
 from datetime import timedelta
 from typing import Callable, Set
@@ -10,51 +10,51 @@ from .mailbox import messages as mailbox_msg
 class AbstractContext(metaclass=ABCMeta):
     @property
     def parent(self) -> pid.PID:
-        return self.__parent
+        return self._parent
 
     @parent.setter
     def parent(self, parent: pid.PID):
-        self.__parent = parent
+        self._parent = parent
 
     @property
     def my_self(self) -> pid.PID:
-        return self.__my_self
+        return self._my_self
 
     @my_self.setter
     def my_self(self, pid: pid.PID):
-        self.__my_self = pid
+        self._my_self = pid
 
     @property
     def actor(self) -> 'Actor':
-        return self.__actor
+        return self._actor
 
     @actor.setter
     def actor(self, actor: 'Actor'):
-        self.__actor = actor
+        self._actor = actor
 
     @property
     def sender(self) -> pid.PID:
-        return self.__sender
+        return self._sender
 
     @property
     def message(self) -> object:
-        return self.__message
+        return self._message
 
     @property
     def receive_timeout(self) -> timedelta:
-        return self.__receive_timeout
+        return self._receive_timeout
 
     @receive_timeout.setter
     def receive_timeout(self, timeout: timedelta) -> None:
         self._receive_timeout = timeout
 
     @property
-    @abstractproperty
+    @abstractmethod
     def children(self):
         raise NotImplementedError("Should Implement this method")
 
     @property
-    @abstractproperty
+    @abstractmethod
     def stash(self):
         raise NotImplementedError("Should Implement this method")
 
@@ -111,7 +111,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive = None
         self.__restart_statistics = None
 
-        self.__receive_timeout = timedelta(milliseconds=0)
+        self.receive_timeout = timedelta(milliseconds=0)
 
         self.__behaviour = []
         self._incarnate_actor()
@@ -254,7 +254,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         raise NotImplementedError("Should Implement this method")
 
     async def _process_message(self, message: object) -> None:
-        self.message = message
+        self._message = message
 
         if self.__middleware is not None:
             await self.__middleware(self)
@@ -263,4 +263,4 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         else:
             await self.__receive(self)
 
-        self.message = None
+        self._message = None

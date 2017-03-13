@@ -17,4 +17,3 @@ if __name__ == "__main__":
     props = actor.from_producer(lambda: HelloActor())
     pid = actor.spawn(props)
     pid.tell(HelloMessage('Hello World!'))
-    input()
