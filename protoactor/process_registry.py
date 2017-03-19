@@ -1,6 +1,6 @@
 from multiprocessing import RLock
 
-from . import utils, pid as pid_, process
+from . import utils, protos_pb2, process
 
 
 @utils.singleton
@@ -28,7 +28,6 @@ class ProcessRegistry:
                 if reff is None:
                     continue
 
-                pid.process = reff
                 return reff
 
         ref = self.__local_actor_refs.get(pid.id, None)
@@ -38,7 +37,9 @@ class ProcessRegistry:
         return process.DeadLettersProcess()
 
     def add(self, id: str, ref: process.AbstractProcess) -> 'PID':
-        _pid = pid_.PID(address=self.address, id=id, ref=ref)
+        _pid = protos_pb2.PID(address=self.address, id=id)
+        _pid.address = self.address
+        _pid.id = id
         self.__local_actor_refs[id] = ref
         return _pid
 

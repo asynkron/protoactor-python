@@ -5,6 +5,7 @@ tox
 pytest-cov
 pytest-xdist
 mypy==0.501
+protobuf==3.0.0
 
 # Check tha the MANIFEST.in is correct
 check-manifest
