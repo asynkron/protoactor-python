@@ -3,6 +3,7 @@ from protoactor.pid import PID
 from protoactor.context import AbstractContext
 from protoactor.messages import Started, Terminated
 from protoactor.process_registry import ProcessRegistry
+from process import AbstractProcess
 
 
 class Endpoint:
@@ -142,6 +143,32 @@ class EndpointWatcher(Actor):
             return None
 
         return None
+
+
+def send_remote_message(pid: 'PID', message: object, sender: 'PID'):
+    #TODO: implement this.
+    pass
+
+
+class RemoteProcess (AbstractProcess):
+    def __init__(self, pid: 'PID'):
+        self.__pid = pid
+
+    def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
+        self.send(pid, message, sender)
+
+    def send_system_message(self, pid: 'PID', message: object):
+        self.send(pid, message, None)
+
+    def send(self, pid: 'PID', message: object, sender: 'PID'):
+        if isinstance(Watch, message):
+            rw = RemoteWatch(message.watcher, self.__pid)
+            # endpoint_manager_pid.tell(rw);
+        elif isinstance(Unwatch, message):
+            ruw = RemoteUnwatch(message.watcher, self.__pid)
+            # endpoint_manager_pid.tell(ruw);
+        else:
+            send_remote_message(self.__pid, message, sender)
 
 
 class EndpointWriterMailbox:
