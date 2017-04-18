@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable
 
-from . import process_registry, props, context, pid
+from . import process_registry, props, context, protos_pb2
 
 class Actor(metaclass=ABCMeta):
     @abstractmethod
@@ -17,7 +17,7 @@ def from_func(receive) -> 'Props':
     pass
 
 
-def spawn(props: 'Props') -> pid.PID:
+def spawn(props: 'Props') -> protos_pb2.PID:
     return props.spawn(process_registry.ProcessRegistry().next_id())
 
 

@@ -1,6 +1,6 @@
 from abc import ABCMeta
 
-from. import pid, restart_statistics
+from. import protos_pb2, restart_statistics
 
 
 class AbstractSystemMessage(metaclass=ABCMeta):
@@ -24,13 +24,13 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who: pid.PID, reason: Exception, crs: restart_statistics.RestartStatistics) -> None:
+    def __init__(self, who: protos_pb2.PID, reason: Exception, crs: restart_statistics.RestartStatistics) -> None:
         self.__who = who
         self.__reason = reason
         self.__crs = crs
 
     @property
-    def who(self) -> pid.PID:
+    def who(self) -> protos_pb2.PID:
         return self.__who
 
     @property
@@ -43,31 +43,38 @@ class Failure(AbstractSystemMessage):
 
 
 class Watch(AbstractSystemMessage):
-    def __init__(self, watcher: pid.PID) -> None:
+    def __init__(self, watcher: protos_pb2.PID) -> None:
         self.watcher = watcher
 
 
 class Unwatch(AbstractSystemMessage):
-    def __init__(self, watcher: pid.PID) -> None:
+    def __init__(self, watcher: protos_pb2.PID) -> None:
         self.watcher = watcher
+
 
 class Stop(AbstractSystemMessage):
     pass
 
+
 class Stopping(AutoReceiveMessage):
     pass
+
 
 class Stopped(AutoReceiveMessage):
     pass
 
+
 class Started(AbstractSystemMessage):
     pass
+
 
 class ReceiveTimeout(AbstractSystemMessage):
     pass
 
+
 class NotInfluenceReceiveTimeout(AbstractSystemMessage):
     pass
+
 
 class PoisonPill(AbstractSystemMessage):
     pass

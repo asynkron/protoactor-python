@@ -1,6 +1,6 @@
 import pytest
 from unittest import mock
-from protoactor import pid
+from protoactor import protos_pb2
 
 
 @pytest.fixture
@@ -9,15 +9,19 @@ def mocked_pid():
     _process.send_user_message = mock.MagicMock(return_value=None)
     _process.send_system_message = mock.MagicMock(return_value=None)
     _process.stop = mock.MagicMock(return_value=None)
-    return pid.PID("sample_address", "sample_id", _process)
+    pid = mock.Mock()
+    pid.address = "sample_address"
+    pid.id = "sample_id"
+    pid.process = _process
+    return pid
 
 
-def test_adress(mocked_pid):
+def test_address(mocked_pid):
     assert mocked_pid.address == "sample_address"
 
 
 def test_id(mocked_pid):
-    assert mocked_pid.id == "sample_id"
+    assert mocked_pid.Id == "sample_id"
 
 
 def test_process(mocked_pid):

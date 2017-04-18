@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from datetime import timedelta, datetime
-from unittest.mock import Mock
+from unittest import mock
 
 import pytest
 
 from protoactor.mailbox.mailbox import Mailbox
 from protoactor.mailbox.messages import ResumeMailbox
 from protoactor.messages import Restart, Stop
-from protoactor.pid import PID
+from protoactor import protos_pb2
 from protoactor.process import LocalProcess
 from protoactor.restart_statistics import RestartStatistics
 from protoactor.supervision import OneForOneStrategy, SupervisorDirective, Supervisor
@@ -19,7 +19,10 @@ def supervisor_data():
     supervisor = Supervisor()
     mailbox = Mailbox(None, None, None, None)
     local_process = LocalProcess(mailbox)
-    pid_child = PID(address='address', id='id', ref=local_process)
+    pid_child = mock.Mock()
+    pid_child.address = 'address'
+    pid_child.id = 'id'
+    pid_child.process = local_process
     restart_statistic = RestartStatistics(5, datetime(2017, 2, 15))
 
     return {
@@ -32,7 +35,7 @@ def supervisor_data():
 
 
 def test_handle_failure_resume_directive(supervisor_data):
-    supervisor_data['local_process'].send_system_message = Mock()
+    supervisor_data['local_process'].send_system_message = mock.Mock()
 
     exc = Exception()
 
@@ -47,10 +50,11 @@ def test_handle_failure_resume_directive(supervisor_data):
     assert called_pid == supervisor_data['pid_child']
     assert isinstance(called_message, ResumeMailbox) is True
 
-def test_handle_failure_restart_directive_can_restart(supervisor_data):
-    supervisor_data['local_process'].send_system_message = Mock()
 
-    supervisor_data['restart_statistic'].request_restart_permission = Mock()
+def test_handle_failure_restart_directive_can_restart(supervisor_data):
+    supervisor_data['local_process'].send_system_message = mock.Mock()
+
+    supervisor_data['restart_statistic'].request_restart_permission = mock.Mock()
     supervisor_data['restart_statistic'].request_restart_permission.return_value = True
 
     exc = Exception()
@@ -65,10 +69,11 @@ def test_handle_failure_restart_directive_can_restart(supervisor_data):
     assert called_pid == supervisor_data['pid_child']
     assert isinstance(called_message, Restart) is True
 
-def test_handle_failure_restart_directive_cant_restart(supervisor_data):
-    supervisor_data['local_process'].send_system_message = Mock()
 
-    supervisor_data['restart_statistic'].request_restart_permission = Mock()
+def test_handle_failure_restart_directive_cant_restart(supervisor_data):
+    supervisor_data['local_process'].send_system_message = mock.Mock()
+
+    supervisor_data['restart_statistic'].request_restart_permission = mock.Mock()
     supervisor_data['restart_statistic'].request_restart_permission.return_value = False
 
     exc = Exception()
@@ -83,8 +88,9 @@ def test_handle_failure_restart_directive_cant_restart(supervisor_data):
     assert called_pid == supervisor_data['pid_child']
     assert isinstance(called_message, Stop) is True
 
+
 def test_handle_failure_stop_directive(supervisor_data):
-    supervisor_data['local_process'].send_system_message = Mock()
+    supervisor_data['local_process'].send_system_message = mock.Mock()
     exc = Exception()
 
     decider = lambda pid, cause : SupervisorDirective.Stop
@@ -97,9 +103,10 @@ def test_handle_failure_stop_directive(supervisor_data):
     assert called_pid == supervisor_data['pid_child']
     assert isinstance(called_message, Stop) is True
 
+
 def test_handle_failure_escalate_directive(supervisor_data):
-    supervisor_data['local_process'].send_system_message = Mock()
-    supervisor_data['supervisor'].escalate_failure = Mock()
+    supervisor_data['local_process'].send_system_message = mock.Mock()
+    supervisor_data['supervisor'].escalate_failure = mock.Mock()
     exc = Exception()
 
     decider = lambda pid, cause : SupervisorDirective.Escalate

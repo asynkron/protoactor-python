@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from . import messages, pid, process, process_registry, restart_statistics
+from . import messages, protos_pb2, process, process_registry, restart_statistics
 from .mailbox.messages import ResumeMailbox
 
 
@@ -18,7 +18,7 @@ class Supervisor:
 
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
-    def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
+    def handle_failure(self, supervisor, child: protos_pb2.PID, rs_stats: restart_statistics.RestartStatistics,
                        reason: Exception):
         raise NotImplementedError("Should Implement this method")
 
@@ -29,10 +29,10 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
 
-    def __get_pid_aref(self, pid: pid.PID) -> process.AbstractProcess:
+    def __get_pid_aref(self, pid: protos_pb2.PID) -> process.AbstractProcess:
         return pid.process if pid.process is not None else process_registry.ProcessRegistry().get(pid)
 
-    def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
+    def handle_failure(self, supervisor, child: protos_pb2.PID, rs_stats: restart_statistics.RestartStatistics,
                        reason: Exception):
         directive = self.__decider(child, reason)
 
