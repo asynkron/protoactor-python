@@ -5,30 +5,94 @@ from typing import Callable, Tuple, Any
 
 class Persistent():
     def __init__(self):
-        self.state = None
-        self.event_index = None
-        self.context = None
-        self.recovering = None
+        self.__state = None
+        self.__index = None
+        self.__context = None
+        self.__recovering = None
 
     @property
     def name(self):
-        return self.context.my_self.id
+        return self.__context.my_self.id
 
-    # @asyncio.coroutine
-    # def init(self, provider, context):
-    #     self.state = provider.get_state()
-    #     self.context = context
-    #     self.recovering = true
-    #     state.restart()
+    @property
+    def actor_id(self):
+        return self.__context.self.id
 
-    #     snapshot = yield from state.get_snapshot()
-    #     if snapshot is not None:
-    #         self.event_index = snapshot.[1]
-    #         #context.receive(snapshot[0])
+    async def init(self, provider, context, actor):
+        self.__state = provider.get_state()
+        self.__context = context
+        self.__actor = actor
 
-    #     def
+        snapshot, index = await self.__state.get_snapshot()
+        if snapshot is not None:
+            self.__index = index
+            actor.update_state(RecoverSnapshot(snapshot, ))
 
-    #     yield from state.get_events(self.name, )
+        def update_actor_state_with_event(e):
+            self.__index += 1
+            actor.update_state(RecoverEvent(e, self.__index))
+
+        await self.__state.get_events(self.actor_id, index, update_actor_state_with_event)
+
+    async def persist_event_async(self, event):
+        self.__index += 1
+        await self.__state.persist_event(self.actor_id, self.__index, event)
+        self.__actor.update_state(PersistedEvent(event, self.__index))
+
+    async def persist_snapshot(self, snapshot):
+        await self.__state.persist_snapshot(self.actor_id, self.__index, snapshot)
+
+    async def delete_snapshot(self, inclusive_to_index):
+        await self.__state.delete_snapshot(inclusive_to_index)
+
+    async def delete_events(self, inclusive_to_index):
+        await self.__state.delete_event(inclusive_to_index)
+
+
+class Snapshot():
+    def __init__(self, state, index):
+        self.__state = state
+        self.__index = index
+
+    @property
+    def state(self):
+        return self.__state
+
+    @property
+    def index(self):
+        return self.__index
+
+
+class RecoverSnapshot(Snapshot):
+    def __init__(self, state, index):
+        super(RecoverSnapshot, self).__init__(state, index)
+
+class PersistedSnapshot(Snapshot):
+    def __init__(self, state, index):
+        super(PersistedSnapshot, self).__init__(state, index)
+
+
+class Event():
+    def __init__(self, data, index):
+        self.__data = data
+        self.__index = index
+
+    @property
+    def data(self):
+        return self.__data
+
+    @property
+    def index(self):
+        return self.__index
+
+
+class RecoverEvent(Event):
+    def __init__(self, data, index):
+        super(RecoverEvent, self).__init__(data, index)
+
+class PersistedEvent(Event):
+    def __init__(self, data, index):
+        super(PersistedEvent, self).__init__(data, index)
 
 
 class PersistentActor(Actor):
