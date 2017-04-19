@@ -26,7 +26,7 @@ class Persistent():
         snapshot, index = await self.__state.get_snapshot()
         if snapshot is not None:
             self.__index = index
-            actor.update_state(RecoverSnapshot(snapshot, ))
+            actor.update_state(RecoverSnapshot(snapshot, self.__index))
 
         def update_actor_state_with_event(e):
             self.__index += 1
@@ -106,9 +106,10 @@ class Provider(metaclass=ABCMeta):
     def get_state() -> 'ProviderState':
         raise NotImplementedError('Should implement this method')
 
+
 class ProviderState(metaclass=ABCMeta):
     @abstractmethod
-    async def get_events(self, actor_name: str, event_index_start: int, callback: Callable[..., None]) -> None:
+    async def get_events(self, actor_name: str, index_start: int, callback: Callable[..., None]) -> None:
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
@@ -116,19 +117,19 @@ class ProviderState(metaclass=ABCMeta):
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
-    def get_snapshot_interval(self) -> int:
+    async def persist_event(self, actor_name: str, index: int, event: Any) -> None:
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
-    async def persist_event(self, actor_name: str, event_index: int, event: Any) -> None:
+    async def persist_snapshot(self, actor_name: str, index: int, snapshot: Any) -> None:
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
-    async def persist_snapshot(self, actor_name: str, event_index: int, snapshot: Any) -> None:
+    async def delete_events(self, actor_name: str, inclusive_to_index: int, event: Any) -> None:
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
-    def restart(self) -> None:
+    async def delete_snapshots(self, actor_name: str, inclusive_to_index: int, snapshot: Any) -> None:
         raise NotImplementedError('Should implement this method')
 
 
@@ -141,9 +142,6 @@ class InMemoryProviderState(ProviderState):
     def __init__(self) -> None:
         self.__events = {}
         self.__snapshots = {}
-
-    def restart(self) -> None:
-        pass
 
     def get_snapshot_interval(self) -> int:
         return 0
