@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
+from typing import List
 
-from . import messages, pid, process, process_registry, restart_statistics
-from .mailbox.messages import ResumeMailbox
+from . import pid
+from .restart_statistics import RestartStatistics
 
 
 class SupervisorDirective:
@@ -11,52 +12,74 @@ class SupervisorDirective:
     Escalate = 3
 
 
-class Supervisor:
-    def escalate_failure(who, reason):
+class Supervisor(metaclass=ABCMeta):
+
+    # TODO: use @abstractmethod
+    def escalate_failure(self, who: 'PID', reason: Exception) -> None:
+        raise NotImplementedError("Implement this on a subclass")
+
+    # TODO: use @abstractmethod
+    def restart_children(self, *pids: List['PID']) -> None:
+        raise NotImplementedError("Implement this on a subclass")
+
+    # TODO: use @abstractmethod
+    def stop_children(self, *pids: List['PID']) -> None:
+        raise NotImplementedError("Implement this on a subclass")
+
+    # TODO: use @abstractmethod
+    def resume_children(self, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
 
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
-    def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
+    def handle_failure(self, supervisor, child: pid.PID,
+                       rs_stats: RestartStatistics,
                        reason: Exception):
         raise NotImplementedError("Should Implement this method")
 
 
 class OneForOneStrategy(AbstractSupervisorStrategy):
+
     def __init__(self, decider, max_retries_number, within_timedelta):
         self.__decider = decider
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
 
-    def __get_pid_aref(self, pid: pid.PID) -> process.AbstractProcess:
-        return pid.process if pid.process is not None else process_registry.ProcessRegistry().get(pid)
-
-    def handle_failure(self, supervisor, child: pid.PID, rs_stats: restart_statistics.RestartStatistics,
+    def handle_failure(self, supervisor, child: pid.PID,
+                       rs_stats: RestartStatistics,
                        reason: Exception):
         directive = self.__decider(child, reason)
 
         if directive == SupervisorDirective.Resume:
-            pid_aref = self.__get_pid_aref(child)
-            pid_aref.send_system_message(child, ResumeMailbox())
+            supervisor.resume_children(child)
             return
 
         if directive == SupervisorDirective.Restart:
-            pid_aref = self.__get_pid_aref(child)
-            if rs_stats.request_restart_permission(self.__max_retries_number, self.__within_timedelta):
-                # TODO: Log console "Restarting {child.ToShortString()} Reason {exc_cause}"
-                pid_aref.send_system_message(child, messages.Restart())
+            if self.request_restart_permission(rs_stats):
+                print("Restarting {0} reason: {1}".format(child, reason))
+                supervisor.restart_children(child)
             else:
-                # TODO: Log console Stopping {child.ToShortString()} Reason { exc_cause}"
-                pid_aref.send_system_message(child, messages.Stop())
+                print("Restarting {0} reason: {1}".format(child, reason))
+                supervisor.stop_children(child)
             return
 
         if directive == SupervisorDirective.Stop:
-            # TODO: Log console Stopping {child.ToShortString()} Reason { exc_cause}"
-            pid_aref = self.__get_pid_aref(child)
-            pid_aref.send_system_message(child, messages.Stop())
+            print("Stopping {0} reason: {1}".format(child, reason))
+            supervisor.stop_children(child)
             return
 
         if directive == SupervisorDirective.Escalate:
             supervisor.escalate_failure(child, reason)
             return
+
+    def request_restart_permission(self, rs: RestartStatistics) -> bool:
+        if self.__max_retries_number == 0:
+            return False
+        rs.fail()
+
+        if self.__within_timedelta is None or rs.is_within_duration(self.__within_timedelta):
+            return self.__failure_count <= self.__max_retries_number
+
+        rs.reset()
+        return True

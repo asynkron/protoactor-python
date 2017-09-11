@@ -1,9 +1,10 @@
-import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 
 class RestartStatistics:
-    def __init__(self, failure_count: int, last_failure_time: Optional[datetime.datetime]) -> None:
+
+    def __init__(self, failure_count: int, last_failure_time: Optional[datetime]) -> None:
         self.__failure_count = failure_count
         self.__last_failure_time = last_failure_time
 
@@ -12,21 +13,17 @@ class RestartStatistics:
         return self.__failure_count
 
     @property
-    def last_failure_time(self) -> datetime.datetime:
+    def last_failure_time(self) -> datetime:
         return self.__last_failure_time
 
-    def request_restart_permission(self, max_retries_number: int, within_timedelta: datetime.timedelta = None):
-        if max_retries_number == 0:
-            return False
-
+    def fail(self) -> None:
         self.__failure_count += 1
 
-        if within_timedelta is None:
-            return self.__failure_count <= max_retries_number
+    def reset(self) -> None:
+        self.__last_failure_time = 0
 
-        max = datetime.datetime.now() - within_timedelta
-        if self.__last_failure_time > max:
-            return self.__failure_count <= max_retries_number
+    def restart(self) -> None:
+        self.__last_failure_time = datetime.now()
 
-        self.__failure_count = 0
-        return True
+    def is_within_duration(self, within: timedelta) -> bool:
+        return (datetime.now() - self.last_failure_time) < within
