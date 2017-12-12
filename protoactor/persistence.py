@@ -162,3 +162,9 @@ class InMemoryProviderState(ProviderState):
 
     async def persist_snapshot(self, actor_name: str, event_index: int, snapshot: Any) -> None:
         self.__snapshots[actor_name] = snapshot, event_index
+
+    async def delete_events(self, actor_name: str, inclusive_to_index: int, event: Any) -> None:
+        self.__events.pop(actor_name)
+
+    async def delete_snapshots(self, actor_name: str, inclusive_to_index: int, snapshot: Any) -> None:
+        self.__snapshots.pop(actor_name)
