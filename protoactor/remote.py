@@ -146,7 +146,7 @@ class EndpointWatcher(Actor):
 
 
 def send_remote_message(pid: 'PID', message: object, sender: 'PID'):
-    #TODO: implement this.
+    # TODO: implement this.
     pass
 
 
@@ -162,10 +162,12 @@ class RemoteProcess (AbstractProcess):
 
     def send(self, pid: 'PID', message: object, sender: 'PID'):
         if isinstance(Watch, message):
-            rw = RemoteWatch(message.watcher, self.__pid)
+            # TODO:
+            # rw = RemoteWatch(message.watcher, self.__pid)
             # endpoint_manager_pid.tell(rw);
         elif isinstance(Unwatch, message):
-            ruw = RemoteUnwatch(message.watcher, self.__pid)
+            # TODO:
+            # ruw = RemoteUnwatch(message.watcher, self.__pid)
             # endpoint_manager_pid.tell(ruw);
         else:
             send_remote_message(self.__pid, message, sender)
