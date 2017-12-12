@@ -162,10 +162,12 @@ class RemoteProcess (AbstractProcess):
 
     def send(self, pid: 'PID', message: object, sender: 'PID'):
         if isinstance(Watch, message):
+            pass
             # TODO:
             # rw = RemoteWatch(message.watcher, self.__pid)
             # endpoint_manager_pid.tell(rw);
         elif isinstance(Unwatch, message):
+            pass
             # TODO:
             # ruw = RemoteUnwatch(message.watcher, self.__pid)
             # endpoint_manager_pid.tell(ruw);
