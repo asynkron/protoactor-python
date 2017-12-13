@@ -22,10 +22,19 @@ class AbstractProcess(metaclass=ABCMeta):
 class LocalProcess(AbstractProcess):
     def __init__(self, mailbox: mailbox.AbstractMailbox) -> None:
         self.__mailbox = mailbox
+        self.__is_dead = False
 
     @property
     def mailbox(self) -> mailbox.AbstractMailbox:
         return self.__mailbox
+
+    def setis_dead(self, value):
+        self.__is_dead = value
+
+    def getis_dead(self):
+        return self.__is_dead
+
+    is_dead = property(getis_dead, setis_dead)
 
     def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
         if sender:
