@@ -3,8 +3,8 @@
 __version__ = "0.0.1"
 
 from .protos_pb2 import PID
-from process import LocalProcess, DeadLettersProcess
-from process_registry import ProcessRegistry
+from .process import LocalProcess, DeadLettersProcess
+from .process_registry import ProcessRegistry
 
 def create_pid(address, id, ref):
     p = PID()
@@ -35,7 +35,7 @@ def __tell(self, message):
 
 def __send_system_message(self, message):
     self.ref.send_system_message(self, message)
-    
+
 
 PID.process = None
 PID.ref = __ref
