@@ -22,17 +22,17 @@ class AbstractProcess(metaclass=ABCMeta):
 class LocalProcess(AbstractProcess):
     def __init__(self, mailbox: mailbox.AbstractMailbox) -> None:
         self.__mailbox = mailbox
-        self.__is_dead = false
+        self.__is_dead = False
 
     @property
     def mailbox(self) -> mailbox.AbstractMailbox:
         return self.__mailbox
 
     def setis_dead(self, value):
-        __is_dead = value
-    
+        self.__is_dead = value
+
     def getis_dead(self):
-        return __is_dead
+        return self.__is_dead
 
     is_dead = property(getis_dead, setis_dead)
 

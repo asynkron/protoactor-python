@@ -15,7 +15,7 @@ def create_pid(address, id, ref):
     return p
 
 
-def __ref (self):
+def __ref(self):
     if self.process is not None:
         if isinstance(self.process, LocalProcess) and self.process.is_dead:
             self.process = None
@@ -30,7 +30,7 @@ def __ref (self):
 
 
 def __tell(self, message):
-    self.ref.send_user_message(this, message)
+    self.ref.send_user_message(self, message)
 
 
 def __send_system_message(self, message):
