@@ -12,6 +12,7 @@ from protoactor.pid import PID
 from protoactor.process import LocalProcess
 from protoactor.restart_statistics import RestartStatistics
 from protoactor.supervision import OneForOneStrategy, SupervisorDirective, Supervisor
+from typing import List
 
 
 class TestSupervisor(Supervisor):
@@ -30,6 +31,9 @@ class TestSupervisor(Supervisor):
 
     def resume_children(self, *pids) -> None:
         print("resume_children")
+
+    def children() -> List['PID']:
+        return []
 
 
 @pytest.fixture(scope='module', )
@@ -68,7 +72,6 @@ def test_handle_failure_resume_directive(supervisor_data):
 def test_handle_failure_restart_directive_can_restart(supervisor_data):
     supervisor_data['local_process'].send_system_message = Mock()
     supervisor_data['supervisor'].restart_children = Mock()
-    supervisor_data['restart_statistic'].is_within_duration = Mock(return_value=False)
     exc = Exception()
 
     decider = lambda pid, cause: SupervisorDirective.Restart
@@ -84,6 +87,7 @@ def test_handle_failure_restart_directive_can_restart(supervisor_data):
 
 def test_handle_failure_restart_directive_cant_restart(supervisor_data):
     supervisor_data['supervisor'].stop_children = Mock()
+    supervisor_data['restart_statistic'].number_of_failures = Mock(return_value=15)
     exc = Exception()
 
     decider = lambda pid, cause: SupervisorDirective.Restart
