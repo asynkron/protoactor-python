@@ -3,8 +3,8 @@
 __version__ = "0.0.1"
 
 from .protos_pb2 import PID
-from .process import LocalProcess, DeadLettersProcess
 from .process_registry import ProcessRegistry
+# from .process import LocalProcess, DeadLettersProcess
 
 
 def __tell(self, message):

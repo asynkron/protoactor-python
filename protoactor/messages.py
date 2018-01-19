@@ -1,7 +1,7 @@
 from abc import ABCMeta
-
-from. import restart_statistics
+from .restart_statistics import RestartStatistics
 from .protos_pb2 import PID
+
 
 class AbstractSystemMessage(metaclass=ABCMeta):
     pass
@@ -24,7 +24,7 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who: PID, reason: Exception, crs: restart_statistics.RestartStatistics) -> None:
+    def __init__(self, who: PID, reason: Exception, crs: RestartStatistics) -> None:
         self.__who = who
         self.__reason = reason
         self.__crs = crs
@@ -38,7 +38,7 @@ class Failure(AbstractSystemMessage):
         return self.__reason
 
     @property
-    def restart_statistics(self) -> restart_statistics.RestartStatistics:
+    def restart_statistics(self) -> RestartStatistics:
         return self.__crs
 
 
