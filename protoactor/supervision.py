@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
-from . import pid
+from .protos_pb2 import PID
 from .restart_statistics import RestartStatistics
 
 
@@ -33,7 +33,7 @@ class Supervisor(metaclass=ABCMeta):
 
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
-    def handle_failure(self, supervisor, child: pid.PID,
+    def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
                        reason: Exception):
         raise NotImplementedError("Should Implement this method")
@@ -46,7 +46,7 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
 
-    def handle_failure(self, supervisor, child: pid.PID,
+    def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
                        reason: Exception):
         directive = self.__decider(child, reason)

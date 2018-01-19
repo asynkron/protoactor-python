@@ -1,5 +1,5 @@
 from protoactor.actor import Actor, from_producer
-from protoactor.pid import PID
+from .protos_pb2 import PID
 from protoactor.context import AbstractContext
 from protoactor.messages import Started, Terminated
 from protoactor.process_registry import ProcessRegistry

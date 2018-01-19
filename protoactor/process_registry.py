@@ -1,6 +1,7 @@
 from multiprocessing import RLock
 
-from . import utils, pid as pid_, process
+from . import utils, process
+from .protos_pb2 import PID
 
 
 @utils.singleton
@@ -38,9 +39,12 @@ class ProcessRegistry:
         return process.DeadLettersProcess()
 
     def add(self, id: str, ref: process.AbstractProcess) -> 'PID':
-        _pid = pid_.PID(address=self.address, id=id, ref=ref)
+        # _pid = pid_.PID(address=self.address, id=id, ref=ref)
+        pid = PID()
+        pid.address = self.address
+        pid.id = id
         self.__local_actor_refs[id] = ref
-        return _pid
+        return pid
 
     def remove(self, pid: 'PID'):
         self.__local_actor_refs.pop(pid.id)

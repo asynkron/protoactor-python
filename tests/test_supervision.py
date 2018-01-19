@@ -8,7 +8,7 @@ import pytest
 from protoactor.mailbox.mailbox import Mailbox
 from protoactor.mailbox.messages import ResumeMailbox
 from protoactor.messages import Restart, Stop
-from protoactor.pid import PID
+from protoactor.protos_pb2 import PID
 from protoactor.process import LocalProcess
 from protoactor.restart_statistics import RestartStatistics
 from protoactor.supervision import OneForOneStrategy, SupervisorDirective, Supervisor
@@ -37,7 +37,9 @@ def supervisor_data():
     supervisor = TestSupervisor()
     mailbox = Mailbox(None, None, None, None)
     local_process = LocalProcess(mailbox)
-    pid_child = PID(address='address', id='id', ref=local_process)
+    pid_child = PID()
+    pid_child.address = 'address'
+    pid_child.id = 'id'
     restart_statistic = RestartStatistics(5, datetime(2017, 2, 15))
 
     return {
