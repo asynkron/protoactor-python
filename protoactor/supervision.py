@@ -20,7 +20,7 @@ class Supervisor(metaclass=ABCMeta):
         raise NotImplementedError("Implement this on a subclass")
 
     # TODO: use @abstractmethod
-    def restart_children(self, *pids: List['PID']) -> None:
+    def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
     # TODO: use @abstractmethod
@@ -31,8 +31,7 @@ class Supervisor(metaclass=ABCMeta):
     def resume_children(self, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
-    @property
-    def children() -> List['PID']:
+    def children(self) -> List['PID']:
         raise NotImplementedError("Implement this on a subclass")
 
 
@@ -62,10 +61,10 @@ class AllForOneStrategy(AbstractSupervisorStrategy):
         elif directive == SupervisorDirective.Restart:
             if self.should_stop(rs_stats):
                 print("Stopping {0} reason: {1}".format(child, reason))
-                supervisor.stop_children(supervisor.children)
+                supervisor.stop_children(*supervisor.children())
             else:
                 print("Restarting {0} reason: {1}".format(child, reason))
-                supervisor.restart_children(reason, supervisor.children)
+                supervisor.restart_children(reason, *supervisor.children())
 
         elif directive == SupervisorDirective.Stop:
             print("Stopping {0} reason: {1}".format(child, reason))
@@ -112,7 +111,7 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
                 supervisor.stop_children(child)
             else:
                 print("Stopping  {0} reason: {1}".format(child, reason))
-                supervisor.restart_children(child)
+                supervisor.restart_children(reason, child)
 
         elif directive == SupervisorDirective.Stop:
             print("Stopping {0} reason: {1}".format(child, reason))
