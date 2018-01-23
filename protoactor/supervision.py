@@ -3,6 +3,7 @@ from typing import List
 
 from . import pid
 from .restart_statistics import RestartStatistics
+from .log import get_logger
 
 
 class SupervisorDirective:
@@ -45,6 +46,7 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
         self.__decider = decider
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
+        self.__logger = get_logger('OneForOneStrategy')
 
     def handle_failure(self, supervisor, child: pid.PID,
                        rs_stats: RestartStatistics,

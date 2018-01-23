@@ -5,6 +5,7 @@ from typing import Callable, Set
 
 from . import invoker, messages, pid, restart_statistics
 from .mailbox import messages as mailbox_msg
+from .log import get_logger
 
 
 class AbstractContext(metaclass=ABCMeta):
@@ -115,6 +116,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
         self.__behaviour = []
         self._incarnate_actor()
+        self.__logger = get_logger('LocalContext')
 
     def watch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
@@ -174,27 +176,30 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     async def invoke_system_message(self, message: object) -> None:
         try:
             if isinstance(message, messages.Started):
-                await self.invoke_user_message(message)
+                return await self.invoke_user_message(message)
             elif isinstance(message, messages.Stop):
-                await self.__handle_stop()
+                return await self.__handle_stop()
             elif isinstance(message, messages.Terminated):
-                await self.__handle_terminated()
+                return await self.__handle_terminated()
             elif isinstance(message, messages.Watch):
-                await self.__handle_watch(message)
+                return await self.__handle_watch(message)
             elif isinstance(message, messages.Unwatch):
-                await self.__handle_unwatch(message)
+                return await self.__handle_unwatch(message)
             elif isinstance(message, messages.Failure):
-                await self.__handle_failure(message)
+                return await self.__handle_failure(message)
             elif isinstance(message, messages.Restart):
-                await self.handle_restart()
+                return await self.handle_restart()
             elif isinstance(message, mailbox_msg.SuspendMailbox):
-                pass
+                return None
             elif isinstance(message, mailbox_msg.ResumeMailbox):
-                pass
+                return None
             else:
-                pass
+                self.__logger.warn("Unknown system message {0}".format(message))
+                return None
 
         except Exception as e:
+            self.__logger.error("Error handling SystemMessage {0}".format(str(e)))
+            # TODO: .Net implementation is just throwing exception upper.
             self.escalate_failure(e, message)
 
     async def invoke_user_message(self, message: object) -> None:
