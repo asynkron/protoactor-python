@@ -14,6 +14,11 @@ class RemotingStub(object):
     Args:
       channel: A grpc.Channel.
     """
+    self.Connect = channel.unary_unary(
+        '/remote.Remoting/Connect',
+        request_serializer=protos__remote__pb2.ConnectRequest.SerializeToString,
+        response_deserializer=protos__remote__pb2.ConnectResponse.FromString,
+        )
     self.Receive = channel.stream_stream(
         '/remote.Remoting/Receive',
         request_serializer=protos__remote__pb2.MessageBatch.SerializeToString,
@@ -23,6 +28,11 @@ class RemotingStub(object):
 
 class RemotingServicer(object):
 
+  def Connect(self, request, context):
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def Receive(self, request_iterator, context):
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
@@ -31,6 +41,11 @@ class RemotingServicer(object):
 
 def add_RemotingServicer_to_server(servicer, server):
   rpc_method_handlers = {
+      'Connect': grpc.unary_unary_rpc_method_handler(
+          servicer.Connect,
+          request_deserializer=protos__remote__pb2.ConnectRequest.FromString,
+          response_serializer=protos__remote__pb2.ConnectResponse.SerializeToString,
+      ),
       'Receive': grpc.stream_stream_rpc_method_handler(
           servicer.Receive,
           request_deserializer=protos__remote__pb2.MessageBatch.FromString,
