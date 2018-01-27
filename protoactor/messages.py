@@ -42,6 +42,9 @@ class Failure(AbstractSystemMessage):
         return self.__crs
 
 
+class SystemMessage:
+    pass
+
 class Watch(AbstractSystemMessage):
     def __init__(self, watcher: PID) -> None:
         self.watcher = watcher
@@ -78,3 +81,9 @@ class NotInfluenceReceiveTimeout(AbstractSystemMessage):
 
 class PoisonPill(AbstractSystemMessage):
     pass
+
+
+class Continuation(SystemMessage):
+    def __init__(self, fun, message):
+        self.action = fun
+        self.message = message

@@ -7,6 +7,8 @@ import threading
 from . import invoker, messages, restart_statistics
 from .mailbox import messages as mailbox_msg
 from .protos_pb2 import PID
+from .process_registry import ProcessRegistry
+from .messages import Continuation
 
 
 class AbstractContext(metaclass=ABCMeta):
@@ -22,29 +24,17 @@ class AbstractContext(metaclass=ABCMeta):
     def parent(self) -> PID:
         return self._parent
 
-    @parent.setter
-    def parent(self, parent: PID):
-        self._parent = parent
-
     @property
     def my_self(self) -> PID:
         return self._my_self
 
-    @my_self.setter
-    def my_self(self, pid: PID):
-        self._my_self = pid
+    @property
+    def sender(self) -> PID:
+        return self._sender
 
     @property
     def actor(self) -> 'Actor':
         return self._actor
-
-    @actor.setter
-    def actor(self, actor: 'Actor'):
-        self._actor = actor
-
-    @property
-    def sender(self) -> PID:
-        return self._sender
 
     @property
     def message(self) -> object:
@@ -54,26 +44,18 @@ class AbstractContext(metaclass=ABCMeta):
     def receive_timeout(self) -> timedelta:
         return self._receive_timeout
 
-    @abstractmethod
-    def set_receive_timeout(self, receive_timeout) -> None:
-        raise NotImplementedError("Should Implement this method")
-
-    @receive_timeout.setter
-    def receive_timeout(self, timeout: timedelta) -> None:
-        self._receive_timeout = timeout
-
     @property
     @abstractmethod
     def children(self):
         raise NotImplementedError("Should Implement this method")
 
+    @abstractmethod
+    def respond(self, message: object):
+        raise NotImplementedError("Should Implement this method")
+
     @property
     @abstractmethod
     def stash(self):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def respond(self, message: object):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -89,18 +71,6 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def set_behavior(self, behavior: Callable[['Actor', 'AbstractContext'], Task]):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def push_behavior(self, behavior: Callable[['Actor', 'AbstractContext'], Task]):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def pop_behavior(self) -> Callable[['Actor', 'AbstractContext'], Task]:
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
     def watch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
 
@@ -109,8 +79,35 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
+    def set_receive_timeout(self, receive_timeout: timedelta) -> None:
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def cancel_receive_timeout(self) -> None:
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
     def _incarnate_actor(self):
         raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def tell(self, target: PID, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def request(self, target: PID, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def reenter_after(self, target: Task, action: Callable):
+        raise NotImplementedError("Should Implement this method")
+
+
+class MessageEnvelope:
+    def __init__(self, message: object, pid: PID, header: object):
+        self.__message = message
+        self.__pid = pid
+        self.__header = header
 
 
 class LocalContext(AbstractContext, invoker.AbstractInvoker):
@@ -126,23 +123,24 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive = None
         self.__restart_statistics = None
 
-        self.receive_timeout = timedelta(milliseconds=0)
+        self._receive_timeout = timedelta(milliseconds=0)
 
         self.__behaviour = []
         self._incarnate_actor()
         self.__timer = None
+        self.__stack = []
+        self.__children = set()
+
 
     def watch(self, pid: PID):
-        raise NotImplementedError("Should Implement this method")
-
-    def pop_behavior(self) -> Callable[['Actor', AbstractContext], Task]:
         raise NotImplementedError("Should Implement this method")
 
     def unwatch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
 
     def spawn(self, props: 'Props') -> PID:
-        raise NotImplementedError("Should Implement this method")
+        p_id = ProcessRegistry().next_id()
+        return self.spawn_named(props, p_id)
 
     def set_behavior(self, receive: Callable[['Actor', AbstractContext], Task]):
         self.__behaviour.clear()
@@ -150,24 +148,26 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__receive = receive
 
     def respond(self, message: object):
-        raise NotImplementedError("Should Implement this method")
+        # TODO: implement sender
+        self.sender.tell(message)
 
     def spawn_named(self, props: 'Props', name: str) -> PID:
-        raise NotImplementedError("Should Implement this method")
+        # TODO: check for guardian
 
-    def push_behavior(self, behavior: Callable[['Actor', AbstractContext], Task]):
-        raise NotImplementedError("Should Implement this method")
+        pid = props.spawn('{0}/{1}'.format(self.my_self, name), self.my_self)
+        self.__children.add(pid)
+        return pid
 
     def spawn_prefix(self, props: 'Props', prefix: str) -> PID:
-        raise NotImplementedError("Should Implement this method")
+        p_id = prefix + ProcessRegistry().next_id()
+        return self.spawn_named(props, p_id)
 
-    @property
     def stash(self):
-        raise NotImplementedError("Should Implement this method")
+        self.__stack.append(self.message)
 
     @property
     def children(self) -> Set[PID]:
-        raise NotImplementedError("Should Implement this method")
+        return self.__children
 
     @property
     def watchers(self) -> Set[PID]:
@@ -177,12 +177,19 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def watching(self) -> Set[PID]:
         raise NotImplementedError("Should Implement this method")
 
+    def tell(self, target: PID, message: object):
+        self.__send_user_message(target, message)
+
+    def request(self, target: PID, message: object):
+        message_envelope = MessageEnvelope(message, self.my_self, None)
+        self.__send_user_message(target, message_envelope)
+
     def set_receive_timeout(self, receive_timeout: timedelta) -> None:
         if receive_timeout == self.receive_timeout:
             return None
 
-        self.stop_receive_timeout()
-        self.receive_timeout = receive_timeout
+        self.__stop_receive_timeout()
+        self._receive_timeout = receive_timeout
 
         if self.__timer is None:
             self.__timer = threading.Timer(self.__get_receive_timeout_seconds(), self._receive_timeout_callback)
@@ -225,12 +232,17 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         except Exception as e:
             self.escalate_failure(e, message)
 
+    def __send_user_message(self, target, message):
+        # TODO: check for middleware
+
+        target.tell(message)
+
     async def invoke_user_message(self, message: object) -> None:
         influence_timeout = True
         if self.receive_timeout > timedelta(milliseconds=0):
             influence_timeout = not isinstance(message, messages.NotInfluenceReceiveTimeout)
             if influence_timeout is True:
-                self.stop_receive_timeout()
+                self.__stop_receive_timeout()
 
         await self._process_message(message)
 
@@ -275,7 +287,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def __try_restart_or_terminate(self):
         raise NotImplementedError("Should Implement this method")
 
-    def stop_receive_timeout(self):
+    def __stop_receive_timeout(self):
         self.__timer.cancel()
 
     def reset_receive_timeout(self):
@@ -283,13 +295,24 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__timer = threading.Timer(self.__timer.interval, self.__timer.function)
         self.__timer.start()
 
-    def _cancel_receive_timeout(self):
+    def cancel_receive_timeout(self):
         if self.__timer is None:
             return
 
-        self.stop_receive_timeout()
+        self.__stop_receive_timeout()
         self.__timer = None
-        self.receive_timeout = None
+        self._receive_timeout = None
+
+    def reenter_after(self, target: Task, action: Callable):
+        msg = self._message
+
+        def act():
+            action()
+            return None
+
+        cont = Continuation(act, msg)
+
+        target.add_done_callback(lambda _: self.my_self.send_system_message(cont))
 
     def _receive_timeout_callback(self):
         if self.__timer is None:
