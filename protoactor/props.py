@@ -1,11 +1,12 @@
 from asyncio import Task
 from typing import Callable, List
 
-from . import context, dispatcher, invoker, messages, pid, process, process_registry, supervision
+from . import context, dispatcher, invoker, messages, process, process_registry, supervision
 from .mailbox import mailbox, queue
+from .protos_pb2 import PID
 
 
-def default_spawner(id: str, props: 'Props', parent: pid.PID) -> pid.PID:
+def default_spawner(id: str, props: 'Props', parent: PID) -> PID:
     _context = context.LocalContext(props.producer, props.supervisor, props.middleware_chain, parent)
     mailbox = props.produce_mailbox(_context, props.dispatcher)
     _process = process.LocalProcess(mailbox)
@@ -25,7 +26,7 @@ def default_mailbox_producer(invoker: invoker.AbstractInvoker, dispatcher: 'Abst
 
 class Props:
     def __init__(self, producer: Callable[[], 'Actor'] = None,
-                 spawner: Callable[[str, 'Props', pid.PID], pid.PID] = default_spawner,
+                 spawner: Callable[[str, 'Props', PID], PID] = default_spawner,
                  mailbox_producer: Callable[
                      [invoker.AbstractInvoker,
                       'AbstractDispatcher'], mailbox.AbstractMailbox] = default_mailbox_producer,
@@ -80,7 +81,7 @@ class Props:
     def with_supervisor_strategy(self, supervisor_strategy) -> 'Props':
         return self.__copy_with({'_Props__supervisor_strategy': supervisor_strategy})
 
-    def spawn(self, id: str, parent: pid.PID = None) -> pid.PID:
+    def spawn(self, id: str, parent: PID = None) -> PID:
         return self.__spawner(id, self, parent)
 
     def produce_mailbox(self, invoker: invoker.AbstractInvoker,
