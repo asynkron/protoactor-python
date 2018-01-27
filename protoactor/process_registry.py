@@ -3,15 +3,14 @@ from multiprocessing import RLock
 from . import utils, process
 from .protos_pb2 import PID
 
-
 @utils.singleton
 class ProcessRegistry:
-    def __init__(self, resolver=None, host: str = "nonhost") -> None:
-        self._hostResolvers = [resolver] if resolver is not None else []
+    def __init__(self) -> None:
+        self._hostResolvers = []
         # python dict structure is atomic for primitive actions. Need to be checked
         self.__local_actor_refs = {}
         self.__sequence_id = 0
-        self.__address = host
+        self.__address = "nonhost"
         self.__lock = RLock()
 
     @property
@@ -22,14 +21,16 @@ class ProcessRegistry:
     def address(self, address: str):
         self.__address = address
 
+    def register_host_resolver(self, resolver):
+        self._hostResolvers.append(resolver)
+
     def get(self, pid: 'PID') -> process.AbstractProcess:
-        if pid.address != self.__address:
+        if pid.address != "nonhost" and pid.address != self.__address:
             for resolver in self._hostResolvers:
                 reff = resolver(pid)
                 if reff is None:
                     continue
 
-                pid.process = reff
                 return reff
 
         ref = self.__local_actor_refs.get(pid.id, None)
