@@ -2,12 +2,21 @@ from abc import ABCMeta, abstractmethod
 from asyncio import Task
 from datetime import timedelta
 from typing import Callable, Set
+import threading
 
 from . import invoker, messages, pid, restart_statistics
 from .mailbox import messages as mailbox_msg
 
 
 class AbstractContext(metaclass=ABCMeta):
+    def __init__(self):
+        self._sender = None
+        self._message = None
+        self._receive_timeout = None
+        self._actor = None
+        self._my_self = None
+        self._parent = None
+
     @property
     def parent(self) -> pid.PID:
         return self._parent
@@ -43,6 +52,10 @@ class AbstractContext(metaclass=ABCMeta):
     @property
     def receive_timeout(self) -> timedelta:
         return self._receive_timeout
+
+    @abstractmethod
+    def set_receive_timeout(self, receive_timeout) -> None:
+        raise NotImplementedError("Should Implement this method")
 
     @receive_timeout.setter
     def receive_timeout(self, timeout: timedelta) -> None:
@@ -101,6 +114,7 @@ class AbstractContext(metaclass=ABCMeta):
 
 class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: pid.PID) -> None:
+        super().__init__()
         self.__producer = producer
         self.__supervisor_strategy = supervisor_strategy
         self.__middleware = middleware
@@ -115,6 +129,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
         self.__behaviour = []
         self._incarnate_actor()
+        self.__timer = None
 
     def watch(self, pid: pid.PID):
         raise NotImplementedError("Should Implement this method")
@@ -161,14 +176,26 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def watching(self) -> Set[pid.PID]:
         raise NotImplementedError("Should Implement this method")
 
-    # def __actor_receive(self, context: AbstractContext):
-    #     return self.actor.receive(context)
+    def set_receive_timeout(self, receive_timeout: timedelta) -> None:
+        if receive_timeout == self.receive_timeout:
+            return None
+
+        self.stop_receive_timeout()
+        self.receive_timeout = receive_timeout
+
+        if self.__timer is None:
+            self.__timer = threading.Timer(self.__get_receive_timeout_seconds(), self._receive_timeout_callback)
+        else:
+            self.reset_receive_timeout()
 
     def _incarnate_actor(self):
         self.__restarting = False
         self.__stopping = False
         self.actor = self.__producer()
         self.set_behavior(self.actor.receive)
+
+    def __get_receive_timeout_seconds(self):
+        return self.receive_timeout.total_seconds()
 
     # invoker.AbstractInvoker Methods
     async def invoke_system_message(self, message: object) -> None:
@@ -202,12 +229,12 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         if self.receive_timeout > timedelta(milliseconds=0):
             influence_timeout = not isinstance(message, messages.NotInfluenceReceiveTimeout)
             if influence_timeout is True:
-                self._stop_receive_timeout()
+                self.stop_receive_timeout()
 
         await self._process_message(message)
 
         if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
-            self._reset_receive_timeout()
+            self.reset_receive_timeout()
 
     def escalate_failure(self, reason: Exception, message: object) -> None:
         if not self.__restart_statistics:
@@ -247,11 +274,28 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
     def __try_restart_or_terminate(self):
         raise NotImplementedError("Should Implement this method")
 
-    def _stop_receive_timeout(self):
-        raise NotImplementedError("Should Implement this method")
+    def stop_receive_timeout(self):
+        self.__timer.cancel()
 
-    def _reset_receive_timeout(self):
-        raise NotImplementedError("Should Implement this method")
+    def reset_receive_timeout(self):
+        self.__timer.cancel()
+        self.__timer = threading.Timer(self.__timer.interval, self.__timer.function)
+        self.__timer.start()
+
+    def _cancel_receive_timeout(self):
+        if self.__timer is None:
+            return
+
+        self.stop_receive_timeout()
+        self.__timer = None
+        self.receive_timeout = None
+
+    def _receive_timeout_callback(self):
+        if self.__timer is None:
+            return
+
+        self._cancel_receive_timeout()
+        # TODO: Self.Request(Proto.ReceiveTimeout.Instance, null); from the .Net implemenation
 
     async def _process_message(self, message: object) -> None:
         self._message = message
