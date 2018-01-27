@@ -114,7 +114,7 @@ class AbstractContext(metaclass=ABCMeta):
 
 
 class LocalContext(AbstractContext, invoker.AbstractInvoker):
-    def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: pid.PID) -> None:
+    def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: PID) -> None:
         super().__init__()
         self.__producer = producer
         self.__supervisor_strategy = supervisor_strategy

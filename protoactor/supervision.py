@@ -97,7 +97,7 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
 
-    def handle_failure(self, supervisor, child: pid.PID,
+    def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
                        reason: Exception):
         directive = self.__decider(child, reason)
@@ -138,7 +138,7 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
 
 
 class AlwaysRestartStrategy(AbstractSupervisorStrategy):
-    def handle_failure(self, supervisor, child: pid.PID,
+    def handle_failure(self, supervisor, child: PID,
                     rs_stats: RestartStatistics,
                     reason: Exception):
 
