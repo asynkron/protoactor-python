@@ -12,10 +12,6 @@ class AutoReceiveMessage(metaclass=ABCMeta):
     pass
 
 
-class Terminated(AbstractSystemMessage):
-    pass
-
-
 class Restarting:
     pass
 
@@ -51,11 +47,6 @@ class Failure(AbstractSystemMessage):
 
 class SystemMessage:
     pass
-
-
-class Watch(AbstractSystemMessage):
-    def __init__(self, watcher: PID) -> None:
-        self.watcher = watcher
 
 
 class Unwatch(AbstractSystemMessage):

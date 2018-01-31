@@ -4,6 +4,20 @@ from threading import Thread
 from typing import Callable
 
 
+class AbstractMessageInvoker(metaclass=ABCMeta):
+    @abstractmethod
+    async def invoke_system_message(self, msg: object):
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    async def invoke_user_message(self, msg: object):
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def escalate_failure(self, reason: Exception, msg: object):
+        raise NotImplementedError("Should Implement this method")
+
+
 class AbstractDispatcher(metaclass=ABCMeta):
     @property
     @abstractmethod

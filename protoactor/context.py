@@ -1,17 +1,28 @@
 from abc import ABCMeta, abstractmethod
 from asyncio import Task
 from datetime import timedelta
+from enum import Enum
 from typing import Callable, Set, List
 import threading
 
-from protoactor.mailbox.messages import ResumeMailbox
+from protoactor.dispatcher import AbstractMessageInvoker
+from protoactor.restart_statistics import RestartStatistics
 
-from . import invoker, messages, restart_statistics
+from protoactor.mailbox.messages import ResumeMailbox, SuspendMailbox
+
+from . import invoker, messages
 from .mailbox import messages as mailbox_msg
-from .protos_pb2 import PID
+from .protos_pb2 import PID, Terminated, Watch
 from .process_registry import ProcessRegistry
-from .messages import Continuation, Restart, Stop
-from .supervision import Supervisor
+from .messages import Continuation, Restart, Stop, Failure
+from .supervision import Supervisor, default_strategy
+
+
+class ContextState(Enum):
+    none = 0
+    Alive = 1
+    Restarting = 2
+    Stopping = 3
 
 
 class AbstractContext(metaclass=ABCMeta):
@@ -113,7 +124,7 @@ class MessageEnvelope:
         self.__header = header
 
 
-class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
+class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, AbstractMessageInvoker):
     def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: PID) -> None:
         super().__init__()
         self.__producer = producer
@@ -132,7 +143,9 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
         self._incarnate_actor()
         self.__timer = None
         self.__stack = []
+        self.__state = ContextState.none
         self.__children = set()
+        self.__watchers = set()
 
     def watch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
@@ -199,8 +212,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
             self.reset_receive_timeout()
 
     def _incarnate_actor(self):
-        self.__restarting = False
-        self.__stopping = False
+        self.__state = ContextState.Alive
         self.actor = self.__producer()
         self.set_behavior(self.actor.receive)
 
@@ -225,16 +237,15 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
             reff = process_registry.get(pid)
             reff.send_system_message(self.my_self, Restart(reason))
 
-    # invoker.AbstractInvoker Methods
     async def invoke_system_message(self, message: object) -> None:
         try:
             if isinstance(message, messages.Started):
                 await self.invoke_user_message(message)
             elif isinstance(message, messages.Stop):
                 await self.__handle_stop()
-            elif isinstance(message, messages.Terminated):
-                await self.__handle_terminated()
-            elif isinstance(message, messages.Watch):
+            elif isinstance(message, Terminated):
+                await self.__handle_terminated(message)
+            elif isinstance(message, Watch):
                 await self.__handle_watch(message)
             elif isinstance(message, messages.Unwatch):
                 await self.__handle_unwatch(message)
@@ -269,9 +280,17 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
         if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
             self.reset_receive_timeout()
 
-    def escalate_failure(self, reason: Exception, message: object) -> None:
-        if not self.__restart_statistics:
-            self.__restart_statistics = restart_statistics.RestartStatistics(1, None)
+    def escalate_failure(self, reason: Exception, obj: object) -> None:
+        if self.__restart_statistics is None:
+            self.__restart_statistics = RestartStatistics(0, None)
+
+        failure = Failure(self.my_self, reason, self.__restart_statistics)
+        self.my_self.send_system_message(SuspendMailbox())
+
+        if self.parent is None:
+            self.__handle_root_failure(failure)
+        else:
+            self.parent.send_system_message(failure)
 
     async def __handle_stop(self):
         self.__restarting = False
@@ -283,16 +302,19 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
 
         await self.__try_restart_or_terminate()
 
-    async def __handle_terminated(self, message: object):
+    async def __handle_terminated(self, message: Terminated):
         self.children.remove(message.who)
-        self.watching.remove(message.who)
+        # self.watching.remove(message.who)
         await self.invoke_user_message(message)
         await self.__try_restart_or_terminate()
 
-    async def __handle_watch(self, message: object):
-        if self.watchers is None:
-            self.watchers = Set()
-        self.watchers.add(message)
+    async def __handle_watch(self, w: Watch):
+        if self.__state == ContextState.Stopping:
+            terminated = Terminated()
+            terminated.who = self.my_self
+            ProcessRegistry().get(w.watcher).send_system_message(w.watcher, terminated)
+        else:
+            self.watchers.add(w.watcher)
 
     async def __handle_unwatch(self, message: object):
         if self.watchers is not None:
@@ -338,10 +360,11 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
         if self.__timer is None:
             return
 
-        self._cancel_receive_timeout()
+        self.cancel_receive_timeout()
         # TODO: Self.Request(Proto.ReceiveTimeout.Instance, null); from the .Net implemenation
 
     async def _process_message(self, message: object) -> None:
+        # TODO: port this method from .Net implementation.
         self._message = message
 
         if self.__middleware is not None:
@@ -352,3 +375,6 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
             await self.__receive(self)
 
         self._message = None
+
+    def __handle_root_failure(self, failure):
+        default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)

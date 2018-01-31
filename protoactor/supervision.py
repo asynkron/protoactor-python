@@ -4,6 +4,7 @@ from enum import Enum
 
 from .protos_pb2 import PID
 from .restart_statistics import RestartStatistics
+from datetime import timedelta
 
 
 class SupervisorDirective(Enum):
@@ -144,3 +145,6 @@ class AlwaysRestartStrategy(AbstractSupervisorStrategy):
                     reason: Exception):
 
         supervisor.restart_children(reason, child)
+
+
+default_strategy = OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, timedelta(seconds=10))
