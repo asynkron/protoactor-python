@@ -1,6 +1,7 @@
 from abc import ABCMeta
 from .restart_statistics import RestartStatistics
 from .protos_pb2 import PID
+from protoactor.utils import singleton
 
 
 class AbstractSystemMessage(metaclass=ABCMeta):
@@ -19,8 +20,14 @@ class Restarting:
     pass
 
 
-class Restart(AbstractSystemMessage):
+@singleton
+class Stop(AbstractSystemMessage):
     pass
+
+
+class Restart(AbstractSystemMessage):
+    def __init__(self, reason):
+        self.reason = reason
 
 
 class Failure(AbstractSystemMessage):
@@ -44,6 +51,7 @@ class Failure(AbstractSystemMessage):
 
 class SystemMessage:
     pass
+
 
 class Watch(AbstractSystemMessage):
     def __init__(self, watcher: PID) -> None:

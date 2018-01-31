@@ -1,14 +1,17 @@
 from abc import ABCMeta, abstractmethod
 from asyncio import Task
 from datetime import timedelta
-from typing import Callable, Set
+from typing import Callable, Set, List
 import threading
+
+from protoactor.mailbox.messages import ResumeMailbox
 
 from . import invoker, messages, restart_statistics
 from .mailbox import messages as mailbox_msg
 from .protos_pb2 import PID
 from .process_registry import ProcessRegistry
-from .messages import Continuation
+from .messages import Continuation, Restart, Stop
+from .supervision import Supervisor
 
 
 class AbstractContext(metaclass=ABCMeta):
@@ -110,13 +113,13 @@ class MessageEnvelope:
         self.__header = header
 
 
-class LocalContext(AbstractContext, invoker.AbstractInvoker):
+class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor):
     def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: PID) -> None:
         super().__init__()
         self.__producer = producer
         self.__supervisor_strategy = supervisor_strategy
         self.__middleware = middleware
-        self.parent = parent
+        self._parent = parent
 
         self.__stopping = False
         self.__restarting = False
@@ -130,7 +133,6 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
         self.__timer = None
         self.__stack = []
         self.__children = set()
-
 
     def watch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
@@ -204,6 +206,24 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker):
 
     def __get_receive_timeout_seconds(self):
         return self.receive_timeout.total_seconds()
+
+    def resume_children(self, *pids: List['PID']) -> None:
+        process_registry = ProcessRegistry()
+        for pid in pids:
+            reff = process_registry.get(pid)
+            reff.send_system_message(self.my_self, ResumeMailbox())
+
+    def stop_children(self, *pids: List['PID']) -> None:
+        process_registry = ProcessRegistry()
+        for pid in pids:
+            reff = process_registry.get(pid)
+            reff.send_system_message(self.my_self, Stop())
+
+    def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
+        process_registry = ProcessRegistry()
+        for pid in pids:
+            reff = process_registry.get(pid)
+            reff.send_system_message(self.my_self, Restart(reason))
 
     # invoker.AbstractInvoker Methods
     async def invoke_system_message(self, message: object) -> None:
