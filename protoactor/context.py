@@ -14,7 +14,7 @@ from . import invoker, messages
 from .mailbox import messages as mailbox_msg
 from .protos_pb2 import PID, Terminated, Watch
 from .process_registry import ProcessRegistry
-from .messages import Continuation, Restart, Stop, Failure
+from .messages import Continuation, Restart, Stop, Failure, Started, Stopped, Restarting
 from .supervision import Supervisor, default_strategy
 
 
@@ -142,7 +142,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         self.__behaviour = []
         self._incarnate_actor()
         self.__timer = None
-        self.__stack = []
+        self.__stash = []
         self.__state = ContextState.none
         self.__children = set()
         self.__watchers = set()
@@ -178,7 +178,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         return self.spawn_named(props, p_id)
 
     def stash(self):
-        self.__stack.append(self.message)
+        self.__stash.append(self.message)
 
     @property
     def children(self) -> Set[PID]:
@@ -258,10 +258,13 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             elif isinstance(message, mailbox_msg.ResumeMailbox):
                 pass
             else:
+                # TODO: log "Unknown system message {0}", msg;
                 pass
 
         except Exception as e:
-            self.escalate_failure(e, message)
+            # self.escalate_failure(e, message)
+            # TODO: log "Error handling SystemMessage {0}", e;
+            raise
 
     def __send_user_message(self, target, message):
         # TODO: check for middleware
@@ -293,12 +296,16 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             self.parent.send_system_message(failure)
 
     async def __handle_stop(self):
-        self.__restarting = False
-        self.__stopping = True
+        if self.__state == ContextState.Stopping:
+            return
+
+        self.__state = ContextState.Stopping
         await self.invoke_user_message(messages.Stopping())
+
+        process_registry = ProcessRegistry()
         if self.children:
             for child in self.children:
-                child.stop()
+                process_registry.get(child).stop(child)
 
         await self.__try_restart_or_terminate()
 
@@ -324,10 +331,26 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         raise NotImplementedError("Should Implement this method")
 
     async def handle_restart(self):
-        raise NotImplementedError("Should Implement this method")
+        self.__state = ContextState.Restarting
+        await self.invoke_user_message(Restarting())
 
-    def __try_restart_or_terminate(self):
-        raise NotImplementedError("Should Implement this method")
+        process_registry = ProcessRegistry()
+        if self.children is not None:
+            for child in self.children:
+                process_registry.get(child).stop(child)
+
+        await self.__try_restart_or_terminate()
+
+    async def __try_restart_or_terminate(self):
+        self.cancel_receive_timeout()
+
+        if len(self.children) > 0:
+            return
+
+        if self.__state == ContextState.Restarting:
+            await self.__restart()
+        elif self.__state == ContextState.Stopping:
+            await self.__stop()
 
     def __stop_receive_timeout(self):
         self.__timer.cancel()
@@ -378,3 +401,37 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
 
     def __handle_root_failure(self, failure):
         default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)
+
+    async def __restart(self):
+        self.__dispose_actor_if_disposable()
+        self._incarnate_actor()
+        ProcessRegistry().get(self.my_self).send_system_message(self.my_self, ResumeMailbox())
+
+        self.invoke_user_message(Started())
+
+        if self.__stash is not None:
+            while len(self.__stash) > 0:
+                msg = self.__stash.pop()
+                await self.invoke_user_message(msg)
+
+    def __dispose_actor_if_disposable(self):
+        # TODO: just check if actor implements  __exit__ method
+        pass
+
+    async def __stop(self):
+        pr = ProcessRegistry()
+        pr.remove(self.my_self)
+        await self.invoke_user_message(Stopped())
+
+        self.__dispose_actor_if_disposable()
+
+        if self.watchers is not None:
+            term = Terminated()
+            term.who = self.my_self
+            for watcher in self.watchers:
+                pr.get(watcher).send_system_message(watcher, term)
+
+        elif self.parent is not None:
+            term = Terminated()
+            term.who = self.my_self
+            pr.get(self.parent).send_system_message(self.parent, term)

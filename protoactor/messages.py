@@ -54,7 +54,8 @@ class Unwatch(AbstractSystemMessage):
         self.watcher = watcher
 
 
-class Stop(AbstractSystemMessage):
+@singleton
+class Restarting:
     pass
 
 
