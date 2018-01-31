@@ -11,7 +11,7 @@ class AbstractSystemMessage(metaclass=ABCMeta):
 class AutoReceiveMessage(metaclass=ABCMeta):
     pass
 
-
+@singleton
 class Restarting:
     pass
 
@@ -52,11 +52,6 @@ class SystemMessage:
 class Unwatch(AbstractSystemMessage):
     def __init__(self, watcher: PID) -> None:
         self.watcher = watcher
-
-
-@singleton
-class Restarting:
-    pass
 
 
 class Stopping(AutoReceiveMessage):
