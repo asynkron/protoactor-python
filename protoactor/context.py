@@ -12,9 +12,9 @@ from protoactor.mailbox.messages import ResumeMailbox, SuspendMailbox
 
 from . import invoker, messages
 from .mailbox import messages as mailbox_msg
-from .protos_pb2 import PID, Terminated, Watch
+from .protos_pb2 import PID, Terminated, Watch, PoisonPill
 from .process_registry import ProcessRegistry
-from .messages import Continuation, Restart, Stop, Failure, Started, Stopped, Restarting
+from .messages import Continuation, Restart, Stop, Failure, Started, Stopped, Restarting, ReceiveTimeout
 from .supervision import Supervisor, default_strategy
 
 
@@ -100,8 +100,12 @@ class AbstractContext(metaclass=ABCMeta):
     def cancel_receive_timeout(self) -> None:
         raise NotImplementedError("Should Implement this method")
 
+    # @abstractmethod
+    # def _incarnate_actor(self):
+    #     raise NotImplementedError("Should Implement this method")
+
     @abstractmethod
-    def _incarnate_actor(self):
+    async def receive(self, message: object, timeout: timedelta = None):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -184,18 +188,15 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
     def children(self) -> Set[PID]:
         return self.__children
 
-    @property
-    def watchers(self) -> Set[PID]:
-        raise NotImplementedError("Should Implement this method")
-
-    @property
-    def watching(self) -> Set[PID]:
-        raise NotImplementedError("Should Implement this method")
+    async def receive(self, message: object, timeout: timedelta = None):
+        if timeout is None:
+            self._message = message
+            return self.__middleware(self) if self.__middleware is not None else self.__default_receive(self)
 
     def tell(self, target: PID, message: object):
         self.__send_user_message(target, message)
 
-    def request(self, target: PID, message: object):
+    def request(self, message: object, target: PID):
         message_envelope = MessageEnvelope(message, self.my_self, None)
         self.__send_user_message(target, message_envelope)
 
@@ -220,22 +221,25 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         return self.receive_timeout.total_seconds()
 
     def resume_children(self, *pids: List['PID']) -> None:
-        process_registry = ProcessRegistry()
+        # process_registry = ProcessRegistry()
         for pid in pids:
-            reff = process_registry.get(pid)
-            reff.send_system_message(self.my_self, ResumeMailbox())
+            pid.send_system_message(ResumeMailbox())
+            # reff = process_registry.get(pid)
+            # reff.send_system_message(self.my_self, ResumeMailbox())
 
     def stop_children(self, *pids: List['PID']) -> None:
-        process_registry = ProcessRegistry()
+        # process_registry = ProcessRegistry()
         for pid in pids:
-            reff = process_registry.get(pid)
-            reff.send_system_message(self.my_self, Stop())
+            pid.send_system_message(Stop())
+            # reff = process_registry.get(pid)
+            # reff.send_system_message(self.my_self, Stop())
 
     def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
-        process_registry = ProcessRegistry()
+        # process_registry = ProcessRegistry()
         for pid in pids:
-            reff = process_registry.get(pid)
-            reff.send_system_message(self.my_self, Restart(reason))
+            pid.send_system_message(Restart(reason))
+            # reff = process_registry.get(pid)
+            # reff.send_system_message(self.my_self, Restart(reason))
 
     async def invoke_system_message(self, message: object) -> None:
         try:
@@ -319,7 +323,8 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         if self.__state == ContextState.Stopping:
             terminated = Terminated()
             terminated.who = self.my_self
-            ProcessRegistry().get(w.watcher).send_system_message(w.watcher, terminated)
+            w.watcher.send_system_message(terminated)
+            # ProcessRegistry().get(w.watcher).send_system_message(w.watcher, terminated)
         else:
             self.watchers.add(w.watcher)
 
@@ -384,7 +389,11 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             return
 
         self.cancel_receive_timeout()
-        # TODO: Self.Request(Proto.ReceiveTimeout.Instance, null); from the .Net implemenation
+
+        pr = ProcessRegistry()
+        reff = pr.get(self.my_self)
+        message_env = MessageEnvelope(ReceiveTimeout(), None, None)
+        reff.send_user_message(self.my_self, message_env)
 
     async def _process_message(self, message: object) -> None:
         # TODO: port this method from .Net implementation.
@@ -405,7 +414,8 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
     async def __restart(self):
         self.__dispose_actor_if_disposable()
         self._incarnate_actor()
-        ProcessRegistry().get(self.my_self).send_system_message(self.my_self, ResumeMailbox())
+        self.my_self.send_system_message(ResumeMailbox())
+        # ProcessRegistry().get(self.my_self).send_system_message(self.my_self, ResumeMailbox())
 
         self.invoke_user_message(Started())
 
@@ -421,6 +431,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
     async def __stop(self):
         pr = ProcessRegistry()
         pr.remove(self.my_self)
+
         await self.invoke_user_message(Stopped())
 
         self.__dispose_actor_if_disposable()
@@ -429,9 +440,20 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             term = Terminated()
             term.who = self.my_self
             for watcher in self.watchers:
-                pr.get(watcher).send_system_message(watcher, term)
+                watcher.send_system_message(term)
+                # pr.get(watcher).send_system_message(watcher, term)
 
         elif self.parent is not None:
             term = Terminated()
             term.who = self.my_self
-            pr.get(self.parent).send_system_message(self.parent, term)
+            self.parent.send_system_message(term)
+            # pr.get(self.parent).send_system_message(self.parent, term)
+
+    def __default_receive(self, context):
+        # pr = ProcessRegistry()
+        if context.message is PoisonPill:
+            context.my_self.stop()
+            # pr.get(context.my_self).stop(context.my_self)
+            return None
+
+        return context.actor.receive(context)

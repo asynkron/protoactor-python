@@ -11,6 +11,7 @@ class AbstractSystemMessage(metaclass=ABCMeta):
 class AutoReceiveMessage(metaclass=ABCMeta):
     pass
 
+
 @singleton
 class Restarting:
     pass
@@ -66,6 +67,7 @@ class Started(AbstractSystemMessage):
     pass
 
 
+@singleton
 class ReceiveTimeout(AbstractSystemMessage):
     pass
 
