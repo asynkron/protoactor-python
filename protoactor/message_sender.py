@@ -1,12 +1,13 @@
-from . import pid
+from .protos_pb2 import PID
+
 
 class MessageSender:
-    def __init__(self, message: object, sender: pid.PID) -> None:
+    def __init__(self, message: object, sender: PID) -> None:
         self.__message = message
         self.__sender = sender
 
     @property
-    def sender(self) -> pid.PID:
+    def sender(self) -> PID:
         return self.__sender
 
     @property

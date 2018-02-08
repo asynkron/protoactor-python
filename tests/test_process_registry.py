@@ -1,7 +1,6 @@
 import pytest
 from unittest import mock
 from protoactor.process_registry import ProcessRegistry
-from protoactor.pid import PID
 from protoactor.process import LocalProcess
 from protoactor.mailbox.mailbox import Mailbox
 from protoactor.process import DeadLettersProcess
@@ -34,7 +33,7 @@ def test_add(nohost: ProcessRegistry, mock_process):
     _pid = ProcessRegistry().add('new_id', mock_process)
     assert _pid.address == ProcessRegistry().address
     assert _pid.id == 'new_id'
-    assert _pid.process == mock_process
+    #assert _pid.process == mock_process
 
 
 def test_remove(nohost: ProcessRegistry, mock_process):

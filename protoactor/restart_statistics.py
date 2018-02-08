@@ -5,25 +5,28 @@ from typing import Optional
 class RestartStatistics:
 
     def __init__(self, failure_count: int, last_failure_time: Optional[datetime]) -> None:
-        self.__failure_count = failure_count
-        self.__last_failure_time = last_failure_time
+        self.__failures_items = []
+        for i in range(0, failure_count):
+            self.__failures_items.append(last_failure_time or datetime.now())
 
     @property
     def failure_count(self) -> int:
-        return self.__failure_count
-
-    @property
-    def last_failure_time(self) -> datetime:
-        return self.__last_failure_time
+        return len(self.__failures_items)
 
     def fail(self) -> None:
-        self.__failure_count += 1
+        self.__failures_items.append(datetime.now())
 
     def reset(self) -> None:
-        self.__last_failure_time = 0
+        self.__failures_items.clear()
 
-    def restart(self) -> None:
-        self.__last_failure_time = datetime.now()
+    def number_of_failures(self, within: timedelta) -> int:
+        res = 0
 
-    def is_within_duration(self, within: timedelta) -> bool:
-        return (datetime.now() - self.last_failure_time) < within
+        if within is not None:
+            for failure_item in self.__failures_items:
+                if datetime.now() - failure_item < within:
+                    res += 1
+        else:
+            res = len(self.__failures_items)
+
+        return res
