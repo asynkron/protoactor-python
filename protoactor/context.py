@@ -273,12 +273,10 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             # TODO: .Net implementation is just throwing exception upper.
             self.escalate_failure(e, message)
 
-
     def __send_user_message(self, target, message):
         # TODO: check for middleware
 
         target.tell(message)
-
 
     async def invoke_user_message(self, message: object) -> None:
         influence_timeout = True
