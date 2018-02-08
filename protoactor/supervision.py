@@ -4,6 +4,7 @@ from enum import Enum
 
 from .protos_pb2 import PID
 from .restart_statistics import RestartStatistics
+from datetime import timedelta
 
 
 class SupervisorDirective(Enum):
@@ -15,22 +16,23 @@ class SupervisorDirective(Enum):
 
 class Supervisor(metaclass=ABCMeta):
 
-    # TODO: use @abstractmethod
+    @abstractmethod
     def escalate_failure(self, who: 'PID', reason: Exception) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
-    # TODO: use @abstractmethod
+    @abstractmethod
     def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
-    # TODO: use @abstractmethod
+    @abstractmethod
     def stop_children(self, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
-    # TODO: use @abstractmethod
+    @abstractmethod
     def resume_children(self, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
+    @abstractmethod
     def children(self) -> List['PID']:
         raise NotImplementedError("Implement this on a subclass")
 
@@ -143,3 +145,6 @@ class AlwaysRestartStrategy(AbstractSupervisorStrategy):
                     reason: Exception):
 
         supervisor.restart_children(reason, child)
+
+
+default_strategy = OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, timedelta(seconds=10))

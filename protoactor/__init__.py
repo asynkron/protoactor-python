@@ -15,5 +15,10 @@ def __send_system_message(self, message):
     ProcessRegistry().get(self).send_system_message(self, message)
 
 
+def __stop(self):
+    ProcessRegistry().get(self).stop(self)
+
+
 PID.tell = __tell
 PID.send_system_message = __send_system_message
+PID.stop = __stop
