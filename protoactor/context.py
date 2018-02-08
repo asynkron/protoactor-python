@@ -12,6 +12,8 @@ from protoactor.mailbox.messages import ResumeMailbox, SuspendMailbox
 
 from . import invoker, messages
 from .mailbox import messages as mailbox_msg
+
+from .log import get_logger
 from .protos_pb2 import PID, Terminated, Watch, PoisonPill
 from .process_registry import ProcessRegistry
 from .messages import Continuation, Restart, Stop, Failure, Started, Stopped, Restarting, ReceiveTimeout
@@ -145,6 +147,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
 
         self.__behaviour = []
         self._incarnate_actor()
+        self.__logger = get_logger('LocalContext')
         self.__timer = None
         self.__stash = []
         self.__state = ContextState.none
@@ -244,7 +247,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
     async def invoke_system_message(self, message: object) -> None:
         try:
             if isinstance(message, messages.Started):
-                await self.invoke_user_message(message)
+                return await self.invoke_user_message(message)
             elif isinstance(message, messages.Stop):
                 await self.__handle_stop()
             elif isinstance(message, Terminated):
@@ -252,23 +255,23 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             elif isinstance(message, Watch):
                 await self.__handle_watch(message)
             elif isinstance(message, messages.Unwatch):
-                await self.__handle_unwatch(message)
+                return await self.__handle_unwatch(message)
             elif isinstance(message, messages.Failure):
-                await self.__handle_failure(message)
+                return await self.__handle_failure(message)
             elif isinstance(message, messages.Restart):
-                await self.handle_restart()
+                return await self.handle_restart()
             elif isinstance(message, mailbox_msg.SuspendMailbox):
-                pass
+                return None
             elif isinstance(message, mailbox_msg.ResumeMailbox):
-                pass
+                return None
             else:
-                # TODO: log "Unknown system message {0}", msg;
-                pass
+                self.__logger.warn("Unknown system message {0}".format(message))
+                return None
 
         except Exception as e:
-            # self.escalate_failure(e, message)
-            # TODO: log "Error handling SystemMessage {0}", e;
-            raise
+            self.__logger.error("Error handling SystemMessage {0}".format(str(e)))
+            # TODO: .Net implementation is just throwing exception upper.
+            self.escalate_failure(e, message)
 
     def __send_user_message(self, target, message):
         # TODO: check for middleware

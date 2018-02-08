@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from . import utils, message_sender, messages
 from .mailbox import mailbox
+from .log import get_logger
 
 
 class AbstractProcess(metaclass=ABCMeta):
@@ -78,6 +79,7 @@ class EventStream:
     def __init__(self):
         self._subscriptions = {}
         self.subscribe(self.__report_deadletters)
+        self.__logger = get_logger('EventStream')
 
     def subscribe(self, fun: Callable[..., None]) -> None:
         uniq_id = uuid4()
@@ -95,4 +97,4 @@ class EventStream:
                              "message": message.message,
                              "sender": message.sender
                              }
-            print(console_message)
+            self.__logger.info(console_message)

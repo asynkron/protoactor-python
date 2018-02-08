@@ -4,6 +4,7 @@ from enum import Enum
 
 from .protos_pb2 import PID
 from .restart_statistics import RestartStatistics
+from .log import get_logger
 from datetime import timedelta
 
 
@@ -51,6 +52,7 @@ class AllForOneStrategy(AbstractSupervisorStrategy):
         self.__decider = decider
         self.__max_retries_number = max_retries_number
         self.__within_timedelta = within_timedelta
+        self.__logger = get_logger('OneForOneStrategy')
 
     def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
