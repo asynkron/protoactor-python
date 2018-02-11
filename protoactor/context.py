@@ -44,6 +44,10 @@ class AbstractContext(metaclass=ABCMeta):
     def my_self(self) -> PID:
         return self._my_self
 
+    @my_self.setter
+    def my_self(self, value) -> PID:
+        self._my_self = value
+
     @property
     def sender(self) -> PID:
         return self._sender
@@ -217,7 +221,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
 
     def _incarnate_actor(self):
         self.__state = ContextState.Alive
-        self.actor = self.__producer()
+        self._actor = self.__producer()
         self.set_behavior(self.actor.receive)
 
     def __get_receive_timeout_seconds(self):
