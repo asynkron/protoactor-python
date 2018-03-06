@@ -340,7 +340,8 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
             self.watchers.remove(message)
 
     async def __handle_failure(self, message: object):
-        raise NotImplementedError("Should Implement this method")
+        # TODO: check if actor implements ISupervisorStrategy
+        self.__supervisor_strategy.handle_failure(self, message.who, message.restart_statistics, message.reason)
 
     async def handle_restart(self):
         self.__state = ContextState.Restarting
