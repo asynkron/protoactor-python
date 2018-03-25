@@ -35,10 +35,12 @@ def _run_async(runner, async_loop):
     try:
         if async_loop_absent:
             async_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(async_loop)
         async_loop.run_until_complete(runner())
     finally:
         if async_loop_absent:
             async_loop.close()
+
 
 class ThreadDispatcher(AbstractDispatcher):
     def __init__(self, async_loop=None):
