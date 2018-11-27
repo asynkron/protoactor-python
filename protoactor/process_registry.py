@@ -1,10 +1,11 @@
 from multiprocessing import RLock
 
+from protoactor.utils import singleton
 from . import utils, process
 from .protos_pb2 import PID
 
-@utils.singleton
-class ProcessRegistry:
+
+class ProcessRegistry(metaclass=singleton):
     def __init__(self) -> None:
         self._hostResolvers = []
         # python dict structure is atomic for primitive actions. Need to be checked
@@ -47,7 +48,7 @@ class ProcessRegistry:
         self.__local_actor_refs[id] = ref
         return pid
 
-    def remove(self, pid: 'PID'):
+    def remove(self, pid: 'PID') -> None:
         self.__local_actor_refs.pop(pid.id)
 
     def next_id(self) -> str:

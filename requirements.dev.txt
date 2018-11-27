@@ -7,6 +7,7 @@ pytest-xdist
 mypy==0.501
 protobuf==3.0.0
 grpcio
+pytest-asyncio
 
 # Check tha the MANIFEST.in is correct
 check-manifest

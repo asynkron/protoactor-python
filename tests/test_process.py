@@ -17,6 +17,7 @@ def process_data():
         'local_process': local_process,
     }
 
+
 def test_get_mailbox_property(process_data):
     mailbox = process_data['mailbox']
     lp = process_data['local_process']
@@ -31,17 +32,6 @@ def test_send_user_message(process_data):
     mailbox.post_user_message = Mock()
     lp.send_user_message(1, "message")
     mess = mailbox.post_user_message.call_args[0][0]
-
-    assert mess == "message"
-
-
-def test_send_user_message(process_data):
-    mailbox = process_data['mailbox']
-    lp = process_data['local_process']
-
-    mailbox.post_system_message = Mock()
-    lp.send_system_message(1, "message")
-    mess = mailbox.post_system_message.call_args[0][0]
 
     assert mess == "message"
 

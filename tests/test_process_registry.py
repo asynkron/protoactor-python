@@ -1,13 +1,16 @@
-import pytest
 from unittest import mock
-from protoactor.process_registry import ProcessRegistry
-from protoactor.process import LocalProcess
-from protoactor.mailbox.mailbox import Mailbox
+
+import pytest
+
 from protoactor.process import DeadLettersProcess
+from protoactor.process_registry import ProcessRegistry
+from protoactor.utils import singleton
 
 
 @pytest.fixture
 def nohost():
+    if ProcessRegistry in singleton._instances:
+        del singleton._instances[ProcessRegistry]
     return ProcessRegistry()
 
 

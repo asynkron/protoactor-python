@@ -15,7 +15,7 @@ class SupervisorDirective(Enum):
     Escalate = 3
 
 
-class Supervisor(metaclass=ABCMeta):
+class AbstractSupervisor(metaclass=ABCMeta):
 
     @abstractmethod
     def escalate_failure(self, who: 'PID', reason: Exception) -> None:

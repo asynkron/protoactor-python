@@ -11,11 +11,11 @@ from protoactor.messages import Restart, Stop
 from protoactor.protos_pb2 import PID
 from protoactor.process import LocalProcess
 from protoactor.restart_statistics import RestartStatistics
-from protoactor.supervision import OneForOneStrategy, AllForOneStrategy, SupervisorDirective, Supervisor
+from protoactor.supervision import OneForOneStrategy, AllForOneStrategy, SupervisorDirective, AbstractSupervisor
 from typing import List
 
 
-class TestSupervisor(Supervisor):
+class TestSupervisor(AbstractSupervisor):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

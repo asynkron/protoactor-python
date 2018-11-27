@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable
+
+from protoactor.props import Props
 from .protos_pb2 import PID
 
 from . import process_registry, props, context
+
 
 class Actor(metaclass=ABCMeta):
     @abstractmethod
@@ -10,12 +13,20 @@ class Actor(metaclass=ABCMeta):
         pass
 
 
+class EmptyActor(Actor):
+    def __init__(self, receive):
+        self._receive = receive
+
+    async def receive(self, context):
+        await self._receive(context)
+
+
 def from_producer(producer: Callable[[], Actor]) -> 'Props':
     return props.Props(producer=producer)
 
 
 def from_func(receive) -> 'Props':
-    pass
+    return from_producer(lambda: EmptyActor(receive))
 
 
 def spawn(props: 'Props') -> PID:
@@ -28,5 +39,3 @@ def spawn_prefix(props: 'Props', prefix: str):
 
 def spawn_named(props: 'Props', name: str):
     pass
-
-

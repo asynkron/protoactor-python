@@ -4,19 +4,23 @@ import sys
 from multiprocessing import RLock
 
 
-def singleton(cls):
-    """Decorator to create singleton classes"""
+class singleton(type):
+    _instances = {}
+    _singleton_lock = RLock()
 
-    instances = {}
-    lock = RLock()
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            with cls._singleton_lock:
+                if cls not in cls._instances:
+                    cls._instances[cls] = super(singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
-    def get_instance(*args, **kwargs):
-        if cls not in instances:
-            with lock:
-                if cls not in instances:
-                    instances[cls] = cls(*args, **kwargs)
-        return instances[cls]
-    return get_instance
+    def clear(cls):
+        try:
+            del singleton._instances[cls]
+        except KeyError:
+            pass
+
 
 
 def python_version():

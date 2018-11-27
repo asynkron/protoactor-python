@@ -4,9 +4,7 @@ from protoactor.utils import singleton
 
 
 def test_singleton():
-
-    @singleton
-    class TestSingleton(object):
+    class TestSingleton(object, metaclass=singleton):
         def __init__(self):
             self.test = ""
 
@@ -15,14 +13,13 @@ def test_singleton():
 
     assert s1 is s2
 
+
 def test_singleton_for_different_classes():
-    @singleton
-    class A(object):
+    class A(object, metaclass=singleton):
         def __init__(self):
             self.a = ""
 
-    @singleton
-    class B(object):
+    class B(object, metaclass=singleton):
         def __init__(self):
             self.b = ""
 
@@ -33,4 +30,4 @@ def test_singleton_for_different_classes():
 
     assert a is a1
     assert b is b1
-    assert not(a is b1)
+    assert not (a is b1)

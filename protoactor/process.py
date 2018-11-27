@@ -2,6 +2,7 @@ from abc import abstractmethod, ABCMeta
 from typing import Optional, Callable
 from uuid import uuid4
 
+from protoactor.utils import singleton
 from . import utils, message_sender, messages
 from .mailbox import mailbox
 from .log import get_logger
@@ -9,11 +10,11 @@ from .log import get_logger
 
 class AbstractProcess(metaclass=ABCMeta):
     @abstractmethod
-    def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
+    def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None) -> None:
         raise NotImplementedError('Should implement this method')
 
     @abstractmethod
-    def send_system_message(self, pid: 'PID', message: object):
+    def send_system_message(self, pid: 'PID', message: object) -> None:
         raise NotImplementedError('Should implement this method')
 
     def stop(self, pid: 'PID') -> None:
@@ -74,8 +75,7 @@ class DeadLetterEvent:
         return self.__sender
 
 
-@utils.singleton
-class EventStream:
+class EventStream(metaclass=singleton):
     def __init__(self):
         self._subscriptions = {}
         self.subscribe(self.__report_deadletters)

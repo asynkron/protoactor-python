@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, ABC
 from asyncio import Task
 from datetime import timedelta
 from enum import Enum
@@ -6,6 +6,9 @@ from typing import Callable, Set, List
 import threading
 
 from protoactor.dispatcher import AbstractMessageInvoker
+from protoactor.futures import FutureProcess
+from protoactor.message_envelope import MessageEnvelope
+from protoactor.message_header import MessageHeader
 from protoactor.restart_statistics import RestartStatistics
 
 from protoactor.mailbox.messages import ResumeMailbox, SuspendMailbox
@@ -17,7 +20,7 @@ from .log import get_logger
 from .protos_pb2 import PID, Terminated, Watch, PoisonPill
 from .process_registry import ProcessRegistry
 from .messages import Continuation, Restart, Stop, Failure, Started, Stopped, Restarting, ReceiveTimeout
-from .supervision import Supervisor, default_strategy
+from .supervision import AbstractSupervisor, default_strategy
 
 
 class ContextState(Enum):
@@ -27,10 +30,59 @@ class ContextState(Enum):
     Stopping = 3
 
 
-class AbstractContext(metaclass=ABCMeta):
+class AbstractSenderContext(metaclass=ABCMeta):
     def __init__(self):
-        self._sender = None
-        self._message = None
+        self.__headers = None
+
+    @property
+    def headers(self) -> MessageHeader:
+        return self.__headers
+
+    @property
+    @abstractmethod
+    def message(self) -> object:
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def send(self, target: PID, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def request(self, target: PID, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    async def request_async(self, target: PID, message: object):
+        raise NotImplementedError("Should Implement this method")
+
+
+class AbstractReceiverContext(metaclass=ABCMeta):
+    @abstractmethod
+    async def receive(self, envelope: MessageEnvelope):
+        raise NotImplementedError("Should Implement this method")
+
+
+class AbstractSpawnContext(metaclass=ABCMeta):
+    @abstractmethod
+    def spawn(self, props: 'Props') -> PID:
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def spawn_prefix(self, props: 'Props', prefix: str) -> PID:
+        raise NotImplementedError("Should Implement this method")
+
+    @abstractmethod
+    def spawn_named(self, props: 'Props', name: str) -> PID:
+        raise NotImplementedError("Should Implement this method")
+
+
+class AbstractRootContext(AbstractSpawnContext, AbstractSenderContext, ABC):
+    pass
+
+
+class AbstractContext(AbstractSenderContext, AbstractReceiverContext, AbstractSpawnContext):
+    def __init__(self):
+        super().__init__()
         self._receive_timeout = None
         self._actor = None
         self._my_self = None
@@ -49,16 +101,13 @@ class AbstractContext(metaclass=ABCMeta):
         self._my_self = value
 
     @property
+    @abstractmethod
     def sender(self) -> PID:
-        return self._sender
+        raise NotImplementedError("Should Implement this method")
 
     @property
     def actor(self) -> 'Actor':
         return self._actor
-
-    @property
-    def message(self) -> object:
-        return self._message
 
     @property
     def receive_timeout(self) -> timedelta:
@@ -76,18 +125,6 @@ class AbstractContext(metaclass=ABCMeta):
     @property
     @abstractmethod
     def stash(self):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def spawn(self, props: 'Props') -> PID:
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def spawn_prefix(self, props: 'Props', prefix: str) -> PID:
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def spawn_named(self, props: 'Props', name: str) -> PID:
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -111,15 +148,7 @@ class AbstractContext(metaclass=ABCMeta):
     #     raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def receive(self, message: object, timeout: timedelta = None):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
     def tell(self, target: PID, message: object):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
-    def request(self, target: PID, message: object):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -127,14 +156,100 @@ class AbstractContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
 
-class MessageEnvelope:
-    def __init__(self, message: object, pid: PID, header: object):
-        self.__message = message
-        self.__pid = pid
-        self.__header = header
+class RootContext(AbstractRootContext):
+    def __init__(self, headers=None, sender_middleware=None):
+        super().__init__()
+        self.__headers = headers
+        self.__sender_middleware = sender_middleware
+        self._message = None
+
+    @property
+    def headers(self):
+        return self.__headers
+
+    @property
+    def sender_middleware(self):
+        return self.__sender_middleware
+
+    @property
+    def message(self):
+        return self._message
+
+    def spawn(self, props):
+        name = ProcessRegistry().next_id()
+        return self.spawn_named(props, name)
+
+    def spawn_named(self, props, name):
+        if props.guardian_strategy is not None:
+            parent = Guardians.get_guardian_pid(props.guardian_strategy)
+        else:
+            parent = None
+        return props.spawn(name, parent)
+
+    def spawn_prefix(self, props, prefix):
+        name = prefix + ProcessRegistry().next_id()
+        return self.spawn_named(props, name)
+
+    def with_headers(self, headers):
+        return self.__copy_with({'_Props__headers': headers})
+
+    def with_sender_middleware(self, middleware):
+        return self.__copy_with({'_Props__sender_middleware': middleware})
+
+    def default_sender(self, context, target, message):
+        target.send_user_message(message)
+
+    def send(self, target, message):
+        self.send_user_message(target, message)
+
+    def request(self, target, message, sender=None):
+        if sender is None:
+            self.send_user_message(target, message)
+        else:
+            self.send(target, MessageEnvelope(message, sender, None))
+
+    async def request_async(self, target, message, cancellation_token=None, timeout=None):
+        if cancellation_token is not None and timeout is None:
+            future = FutureProcess(cancellation_token)
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            self.send_user_message(target, message_envelope)
+            return await future.task
+        elif cancellation_token is None and timeout is not None:
+            future = FutureProcess()
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            self.send_user_message(target, message_envelope)
+            await future.cancellable_wait(timeout)
+            return await future.task
+        else:
+            future = FutureProcess()
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            self.send_user_message(target, message_envelope)
+            return await future.task
 
 
-class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, AbstractMessageInvoker):
+    def send_user_message(self, target, message):
+        if self.__sender_middleware is not None:
+            if isinstance(message, MessageEnvelope):
+                self.__sender_middleware(self, target, message)
+            else:
+                self.__sender_middleware(self, target, MessageEnvelope(message, None, None))
+        else:
+            target.send_user_message(message)
+
+    def __copy_with(self, new_params):
+        params = self.__dict__
+        params.update(new_params)
+
+        _params = {}
+        for key in params:
+            new_key = key.replace('_Props__', '')
+            _params[new_key] = params[key]
+
+        return RootContext(**_params)
+
+
+class LocalContext(AbstractContext, invoker.AbstractInvoker, AbstractSupervisor, AbstractMessageInvoker):
+
     def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: PID) -> None:
         super().__init__()
         self.__producer = producer
@@ -158,6 +273,20 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         self.__children = set()
         self.__watchers = set()
 
+        self.__message_or_envelope = None
+
+    @property
+    def message(self) -> object:
+        return MessageEnvelope.unwrap_message(self.__message_or_envelope)
+
+    @property
+    def sender(self) -> PID:
+        return MessageEnvelope.unwrap_sender(self.__message_or_envelope)
+
+    @property
+    def children(self) -> Set[PID]:
+        return self.__children
+
     def watch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
 
@@ -174,8 +303,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         self.__receive = receive
 
     def respond(self, message: object):
-        # TODO: implement sender
-        self.sender.tell(message)
+        self.send(self.sender, message)
 
     def spawn_named(self, props: 'Props', name: str) -> PID:
         # TODO: check for guardian
@@ -191,14 +319,19 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
     def stash(self):
         self.__stash.append(self.message)
 
-    @property
-    def children(self) -> Set[PID]:
-        return self.__children
-
-    async def receive(self, message: object, timeout: timedelta = None):
+    async def receive(self, envelope: object, timeout: timedelta = None):
         if timeout is None:
-            self._message = message
+            self.__message_or_envelope = envelope
             return self.__middleware(self) if self.__middleware is not None else self.__default_receive(self)
+
+    async def request_async(self, target: PID, message: object):
+        future = FutureProcess()
+        message_envelope = MessageEnvelope(message, future.pid, None)
+        self.__send_user_message(target, message_envelope)
+        return future.task
+
+    def send(self, target: PID, message: object):
+        self.__send_user_message(target, message)
 
     def tell(self, target: PID, message: object):
         self.__send_user_message(target, message)
@@ -280,7 +413,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
     def __send_user_message(self, target, message):
         # TODO: check for middleware
 
-        target.tell(message)
+        target.send_user_message(message)
 
     async def invoke_user_message(self, message: object) -> None:
         influence_timeout = True
@@ -405,7 +538,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
 
     async def _process_message(self, message: object) -> None:
         # TODO: port this method from .Net implementation.
-        self._message = message
+        self.__message_or_envelope = message
 
         if self.__middleware is not None:
             await self.__middleware(self)
@@ -414,7 +547,7 @@ class LocalContext(AbstractContext, invoker.AbstractInvoker, Supervisor, Abstrac
         else:
             await self.__receive(self)
 
-        self._message = None
+        self.__message_or_envelope = None
 
     def __handle_root_failure(self, failure):
         default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)

@@ -4,7 +4,7 @@ from .protos_pb2 import PID
 from protoactor.utils import singleton
 
 
-class AbstractSystemMessage(metaclass=ABCMeta):
+class AbstractSystemMessage:
     pass
 
 
@@ -12,13 +12,11 @@ class AutoReceiveMessage(metaclass=ABCMeta):
     pass
 
 
-@singleton
-class Restarting:
+class Restarting(metaclass=singleton):
     pass
 
 
-@singleton
-class Stop(AbstractSystemMessage):
+class Stop(AbstractSystemMessage, metaclass=singleton):
     pass
 
 
@@ -67,8 +65,7 @@ class Started(AbstractSystemMessage):
     pass
 
 
-@singleton
-class ReceiveTimeout(AbstractSystemMessage):
+class ReceiveTimeout(AbstractSystemMessage, metaclass=singleton):
     pass
 
 
