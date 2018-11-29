@@ -1,8 +1,6 @@
-import asyncio
 import pytest
 
-from protoactor import actor
-from protoactor.context import RootContext
+from protoactor.actor import Props, RootContext
 
 context = RootContext()
 
@@ -19,8 +17,8 @@ async def empty_receive(context):
 
 @pytest.mark.asyncio
 async def test_request_actor_async():
-    props = actor.from_func(hello_function)
-    pid = actor.spawn(props)
+    props = Props.from_func(hello_function)
+    pid = context.spawn(props)
     reply = await context.request_async(pid, "hello")
 
     assert "hey" == reply
@@ -29,8 +27,8 @@ async def test_request_actor_async():
 @pytest.mark.asyncio
 async def test_request_actor_async_should_raise_timeout_exception_when_timeout_is_reached():
     with pytest.raises(TimeoutError) as excinfo:
-        props = actor.from_func(empty_receive)
-        pid = actor.spawn(props)
+        props = Props.from_func(empty_receive)
+        pid = context.spawn(props)
         await context.request_async(pid, "", timeout=0.01)
 
     assert 'TimeoutError' in str(excinfo)
@@ -38,8 +36,8 @@ async def test_request_actor_async_should_raise_timeout_exception_when_timeout_i
 
 @pytest.mark.asyncio
 async def test_request_actor_async_should_not_raise_timeout_exception_when_result_is_first():
-    props = actor.from_func(hello_function)
-    pid = actor.spawn(props)
+    props = Props.from_func(hello_function)
+    pid = context.spawn(props)
     reply = await context.request_async(pid, "hello", timeout=0.01)
 
     assert "hey" == reply

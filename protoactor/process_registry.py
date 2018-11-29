@@ -1,7 +1,7 @@
 from multiprocessing import RLock
 
 from protoactor.utils import singleton
-from . import utils, process
+from . import process
 from .protos_pb2 import PID
 
 

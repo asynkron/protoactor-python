@@ -1,4 +1,6 @@
 from protoactor import actor, context
+from protoactor.context import RootContext
+from protoactor.props import Props
 
 
 class HelloMessage:
@@ -14,6 +16,7 @@ class HelloActor(actor.Actor):
 
 
 if __name__ == "__main__":
-    props = actor.from_producer(lambda: HelloActor())
-    pid = actor.spawn(props)
+    context = RootContext()
+    props = Props.from_producer(lambda: HelloActor())
+    pid = context.spawn(props)
     pid.tell(HelloMessage('Hello World!'))

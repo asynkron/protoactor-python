@@ -22,7 +22,6 @@ class singleton(type):
             pass
 
 
-
 def python_version():
     """Get the version of python."""
 

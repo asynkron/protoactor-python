@@ -1,6 +1,8 @@
-from .actor import Actor
+
 from abc import ABCMeta, abstractmethod
 from typing import Callable, Tuple, Any
+
+from protoactor.actor import Actor
 
 
 class Persistent():
@@ -67,6 +69,7 @@ class RecoverSnapshot(Snapshot):
     def __init__(self, state, index):
         super(RecoverSnapshot, self).__init__(state, index)
 
+
 class PersistedSnapshot(Snapshot):
     def __init__(self, state, index):
         super(PersistedSnapshot, self).__init__(state, index)
@@ -90,20 +93,25 @@ class RecoverEvent(Event):
     def __init__(self, data, index):
         super(RecoverEvent, self).__init__(data, index)
 
+
 class PersistedEvent(Event):
     def __init__(self, data, index):
         super(PersistedEvent, self).__init__(data, index)
 
 
+class Persistance(object):
+    pass
+
+
 class PersistentActor(Actor):
     @abstractmethod
-    def persistence() -> 'Persistance':
+    def persistence(self) -> 'Persistance':
         raise NotImplementedError('Should implement this method')
 
 
 class Provider(metaclass=ABCMeta):
     @abstractmethod
-    def get_state() -> 'ProviderState':
+    def get_state(self) -> 'ProviderState':
         raise NotImplementedError('Should implement this method')
 
 

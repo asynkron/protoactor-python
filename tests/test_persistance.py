@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import Mock
 import asyncio
+from unittest.mock import Mock
+
 from protoactor.persistence import InMemoryProviderState
+
 
 def test_InMemoryProviderState_get_snapshot():
     loop = asyncio.get_event_loop()

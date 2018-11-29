@@ -10,5 +10,5 @@ def test_circular_dependencies():
     from protoactor.protos_pb2 import PID
     from protoactor.process import DeadLetterEvent
     from protoactor.process_registry import ProcessRegistry
-    from protoactor.props import Props
+    from protoactor.actor import Props
     from protoactor.supervision import OneForOneStrategy, SupervisorDirective, AbstractSupervisor

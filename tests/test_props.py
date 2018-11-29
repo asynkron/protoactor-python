@@ -1,5 +1,7 @@
 import pytest
-from protoactor.props import Props
+
+from protoactor.actor import Props
+
 
 @pytest.mark.skip(reason="need to refactor this test")
 def test_props_default_init():

@@ -2,10 +2,11 @@ from abc import abstractmethod, ABCMeta
 from typing import Optional, Callable
 from uuid import uuid4
 
+from protoactor import PID
 from protoactor.utils import singleton
-from . import utils, message_sender, messages
-from .mailbox import mailbox
+from . import message_sender, messages
 from .log import get_logger
+from .mailbox import mailbox
 
 
 class AbstractProcess(metaclass=ABCMeta):

@@ -1,7 +1,7 @@
 import asyncio
 
-from protoactor import actor
 from protoactor.context import RootContext
+from protoactor.props import Props
 
 
 class HelloMessage:
@@ -17,8 +17,8 @@ async def hello_function(context):
 
 async def main():
     context = RootContext()
-    props = actor.from_func(hello_function)
-    pid = actor.spawn(props)
+    props = Props.from_func(hello_function)
+    pid = context.spawn(props)
 
     reply = await context.request_async(pid, HelloMessage('Hello'))
     print(reply)
