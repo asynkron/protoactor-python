@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from protoactor.utils import singleton
+import sys
+
+import pytest
+
+from protoactor.utils import singleton, Stack
+
+
+@pytest.fixture
+def stack():
+    return Stack()
 
 
 def test_singleton():
@@ -31,3 +40,19 @@ def test_singleton_for_different_classes():
     assert a is a1
     assert b is b1
     assert not (a is b1)
+
+
+def test_stack_push_pop(stack):
+    stack.push("Test data")
+    assert stack.pop() == "Test data"
+
+
+def test_stack_push_peek_len(stack):
+    stack.push("Test data")
+    assert stack.peek() == "Test data"
+    assert len(stack) == 1
+
+
+def test_stack_push_is_empty(stack):
+    stack.push("Test data")
+    assert stack.is_empty() == False

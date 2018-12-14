@@ -1,6 +1,4 @@
-from protoactor import actor, context
-from protoactor.context import RootContext
-from protoactor.props import Props
+from protoactor.actor import Actor, RootContext, Props, AbstractContext
 
 
 class HelloMessage:
@@ -8,8 +6,8 @@ class HelloMessage:
         self.text = text
 
 
-class HelloActor(actor.Actor):
-    async def receive(self, context: context.AbstractContext) -> None:
+class HelloActor(Actor):
+    async def receive(self, context: AbstractContext) -> None:
         message = context.message
         if isinstance(message, HelloMessage):
             print(message.text)
