@@ -1,0 +1,17 @@
+syntax = "proto3";
+package remote_test_messages;
+import "protoactor/actor/protos.proto";
+
+message Start {}
+
+message StartRemote {
+	actor.PID Sender = 1;
+}
+
+message Ping {
+	string message=1;
+}
+
+message Pong {
+	string message=1;
+}

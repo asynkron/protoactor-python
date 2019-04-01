@@ -7,11 +7,11 @@ class AbstractMailBoxStatistics(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def message_posted(self):
+    def message_posted(self, message):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def message_received(self):
+    def message_received(self, message):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -20,14 +20,14 @@ class AbstractMailBoxStatistics(metaclass=ABCMeta):
 
 
 class MailBoxStatistics(AbstractMailBoxStatistics):
-    def message_posted(self):
+    def mailbox_stated(self):
+        raise NotImplementedError("Should Implement this method")
+
+    def message_posted(self, message):
+        raise NotImplementedError("Should Implement this method")
+
+    def message_received(self, message):
         raise NotImplementedError("Should Implement this method")
 
     def mailbox_empty(self):
-        raise NotImplementedError("Should Implement this method")
-
-    def message_received(self):
-        raise NotImplementedError("Should Implement this method")
-
-    def mailbox_stated(self):
         raise NotImplementedError("Should Implement this method")

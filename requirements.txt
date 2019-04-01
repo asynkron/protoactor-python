@@ -1,2 +1,2 @@
 grpcio
-protobuf==3.0.0
+protobuf
