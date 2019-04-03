@@ -159,7 +159,7 @@ async def test_when_remote_terminated_local_watcher_receives_notification(remote
                                                 timeout=5)
 
     assert await poll_until_true(func1)
-    assert 1 == await root_context.request_async(local_actor, GetTerminatedMessagesCount(), timeout=5)
+    assert await root_context.request_async(local_actor, GetTerminatedMessagesCount(), timeout=5) == 1
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -205,7 +205,8 @@ class SendMessageToRemoteActor():
         self.actor = actor
 
 
-class GetTerminatedMessagesCount(): pass
+class GetTerminatedMessagesCount:
+    pass
 
 
 class LocalActor(Actor):

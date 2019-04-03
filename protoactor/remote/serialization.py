@@ -97,5 +97,5 @@ class Serialization(metaclass=singleton):
     def get_type_name(self, message, serializer_id):
         return self.__serializers[serializer_id].get_type_name(message)
 
-    def deserialize(self, type_name, bytes, serializer_id):
-        return self.__serializers[serializer_id].deserialize(bytes, type_name)
+    def deserialize(self, type_name, data, serializer_id):
+        return self.__serializers[serializer_id].deserialize(data, type_name)

@@ -32,7 +32,7 @@ class Props:
                  mailbox_producer: Callable[[], mailbox.AbstractMailbox] =
                  MailboxFactory.create_unbounded_mailbox,
                  guardian_strategy: AbstractSupervisorStrategy = None,
-                 dispatcher: 'AbstractDispatcher' = ThreadDispatcher(),
+                 dispatcher: AbstractDispatcher = ThreadDispatcher(),
                  middleware: List[Callable[[AbstractContext], Task]] = None,
                  middleware_chain: Callable[[AbstractContext], Task] = None) -> None:
         self.__producer = producer

@@ -187,8 +187,8 @@ class ProcessRegistry(metaclass=singleton):
         if id not in self.__local_actor_refs:
             self.__local_actor_refs[id] = ref
             return pid, True
-        else:
-            return pid, False
+
+        return pid, False
 
     def remove(self, pid: 'PID') -> None:
         self.__local_actor_refs.pop(pid.id)

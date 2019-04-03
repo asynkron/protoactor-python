@@ -50,13 +50,12 @@ class EventStream():
         return sub
 
     def publish(self, message: object) -> None:
-        async def action():
-            try:
-                await sub.action(message)
-            except Exception:
-                self.__logger.log_warning('Exception has occurred when publishing a message.')
-
         for sub in self.__subscriptions.values():
+            async def action():
+                try:
+                    await sub.action(message)
+                except Exception:
+                    self.__logger.log_warning('Exception has occurred when publishing a message.')
             sub.dispatcher.schedule(action)
 
     def unsubscribe(self, uniq_id):

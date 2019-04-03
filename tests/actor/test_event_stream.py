@@ -31,7 +31,7 @@ def test_can_subscribe_to_all_event_types():
     assert received_events[1] == 1
 
     event_stream.publish(True)
-    assert received_events[2] == True
+    assert received_events[2] is True
 
 
 def test_can_unsubscribe_from_events():

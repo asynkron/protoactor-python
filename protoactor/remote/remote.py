@@ -74,7 +74,7 @@ class Remote(metaclass=singleton):
 
     def start(self, hostname: str, port: int, config: RemoteConfig = RemoteConfig()) -> None:
         self.__remote_config = config
-        ProcessRegistry().register_host_resolver(lambda pid: RemoteProcess(pid))
+        ProcessRegistry().register_host_resolver(RemoteProcess)
         EndpointManager().start()
         self._endpoint_reader = EndpointReader()
 
@@ -118,7 +118,7 @@ class Remote(metaclass=singleton):
         EndpointManager().remote_deliver(env)
 
     def __spawn_activator(self):
-        props = Props().from_producer(lambda: Activator()) \
+        props = Props().from_producer(Activator) \
             .with_guardian_supervisor_strategy(Supervision().always_restart_strategy)
         self.__activator_pid = GlobalRootContext().instance.spawn_named(props, 'activator')
 
@@ -160,7 +160,7 @@ class EndpointManager(metaclass=singleton):
 
     def start(self) -> None:
         # self.__logger.log_debug('Started EndpointManager')
-        props = Props().from_producer(lambda: EndpointSupervisor()) \
+        props = Props().from_producer(EndpointSupervisor) \
             .with_guardian_supervisor_strategy(Supervision().always_restart_strategy) \
             .with_dispatcher(Dispatchers().synchronous_dispatcher) \
             .with_mailbox(MailboxFactory().create_unbounded_synchronous_mailbox)
@@ -303,8 +303,8 @@ class EndpointWatcher(Actor):
 
     def __process_endpoint_terminated_event_message_in_connected_state(self, context, msg):
         # self.__logger.log_debug()
-        for id, pid_set in self._watched.items():
-            watcher_pid = PID(address=ProcessRegistry().address, id=id)
+        for watched_id, pid_set in self._watched.items():
+            watcher_pid = PID(address=ProcessRegistry().address, id=watched_id)
             watcher_ref = ProcessRegistry().get(watcher_pid)
             if watcher_ref != DeadLettersProcess():
                 for pid in pid_set:

@@ -15,24 +15,24 @@ def register_file_descriptor():
 def test_can_serialize_and_deserialize_json_pid():
     type_name = "actor.PID"
     json = JsonMessage(type_name, "{ \"address\":\"123\", \"id\":\"456\"}")
-    bytes = Serialization().serialize(json, 1)
-    deserialized = Serialization().deserialize(type_name, bytes, 1)
-    assert "123" == deserialized.address
-    assert "456" == deserialized.id
+    data = Serialization().serialize(json, 1)
+    deserialized = Serialization().deserialize(type_name, data, 1)
+    assert deserialized.address == "123"
+    assert deserialized.id == "456"
 
 
 def test_can_serialize_and_deserialize_json():
     type_name = "remote_test_messages.Ping"
     json = JsonMessage(type_name, "{ \"message\":\"Hello\"}")
-    bytes = Serialization().serialize(json, 1)
-    deserialized = Serialization().deserialize(type_name, bytes, 1)
-    assert "Hello" == deserialized.message
+    data = Serialization().serialize(json, 1)
+    deserialized = Serialization().deserialize(type_name, data, 1)
+    assert deserialized.message == "Hello"
 
 
 def test_can_serialize_and_deserialize_protobuf():
     type_name = "actor.PID"
     pid = PID(address='123', id='456')
-    bytes = Serialization().serialize(pid, 0)
-    deserialized = Serialization().deserialize(type_name, bytes, 0)
-    assert "123" == deserialized.address
-    assert "456" == deserialized.id
+    data = Serialization().serialize(pid, 0)
+    deserialized = Serialization().deserialize(type_name, data, 0)
+    assert deserialized.address == "123"
+    assert deserialized.id == "456"

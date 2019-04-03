@@ -5,7 +5,7 @@ tox
 pytest-cov
 pytest-xdist
 mypy==0.501
-protobuf
+protobuf==3.6.0
 grpclib
 pytest-asyncio
 
