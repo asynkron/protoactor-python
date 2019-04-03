@@ -1,7 +1,8 @@
 from asyncio import Task
 from typing import Callable, List
 
-from protoactor.actor import PID, ProcessRegistry
+from protoactor.actor import ProcessRegistry
+from protoactor.actor.protos_pb2 import PID
 from protoactor.actor.actor import ActorContext, Actor, EmptyActor, AbstractContext, Started
 from protoactor.actor.exceptions import ProcessNameExistException
 from protoactor.actor.process import LocalProcess
