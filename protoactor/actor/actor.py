@@ -6,10 +6,10 @@ from enum import Enum
 
 from typing import Callable, List
 
-from protoactor.actor import ProcessRegistry, messages
+from protoactor.actor import messages
 from protoactor.actor.log import get_logger
 from protoactor.actor.message_envelope import MessageEnvelope
-from protoactor.actor.process import Guardians, FutureProcess
+from protoactor.actor.process import Guardians, FutureProcess, ProcessRegistry
 from protoactor.actor.invoker import AbstractInvoker
 from protoactor.actor.message_header import MessageHeader
 
