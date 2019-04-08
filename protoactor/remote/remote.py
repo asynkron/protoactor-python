@@ -344,7 +344,7 @@ class EndpointWatcher(Actor):
 
 class EndpointWriter(Actor):
     def __init__(self, address: str, channel_options: Dict[str, str], call_options,
-                 channel_credentials: grpc.ChannelCredentials):
+                 channel_credentials):
         self._serializer_id = None
         self._logger = None
         self._client = None
