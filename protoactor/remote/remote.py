@@ -2,7 +2,6 @@ import asyncio
 import threading
 from typing import Dict
 
-import grpc
 from grpclib.client import Channel
 from grpclib.const import Status
 from grpclib.exceptions import GRPCError, StreamTerminatedError
