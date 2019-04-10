@@ -86,7 +86,7 @@ class Remote(metaclass=singleton):
 
     def shutdown(self, gracefull=True):
         try:
-            if (gracefull):
+            if gracefull:
                 EndpointManager().stop()
                 self._endpoint_reader.suspend(True)
                 self.__stop_activator()

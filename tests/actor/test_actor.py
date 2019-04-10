@@ -22,7 +22,7 @@ async def test_request_actor_async():
     pid = context.spawn(props)
     reply = await context.request_async(pid, "hello")
 
-    assert "hey" == reply
+    assert reply == "hey"
 
 
 @pytest.mark.asyncio
@@ -41,4 +41,4 @@ async def test_request_actor_async_should_not_raise_timeout_exception_when_resul
     pid = context.spawn(props)
     reply = await context.request_async(pid, "hello", timeout=0.01)
 
-    assert "hey" == reply
+    assert reply == "hey"

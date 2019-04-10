@@ -16,7 +16,7 @@ def test_props_default_init():
     assert props.middleware_chain is None
 
 
-class PropsObj(object):
+class PropsObj():
     pass
 
 

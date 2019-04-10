@@ -51,31 +51,31 @@ class LightBulb(Actor):
 
 @pytest.mark.asyncio
 async def test_can_change_states():
-    test_actor_props = Props.from_producer(lambda: LightBulb())
+    test_actor_props = Props.from_producer(LightBulb)
     context = RootContext()
     actor = context.spawn(test_actor_props)
     response = await context.request_async(actor, PressSwitch())
-    assert "Turning on" == response
+    assert response == "Turning on"
     response = await context.request_async(actor, Touch())
-    assert "Hot!" == response
+    assert response == "Hot!"
     response = await context.request_async(actor, PressSwitch())
-    assert "Turning off" == response
+    assert response == "Turning off"
     response = await context.request_async(actor, Touch())
-    assert "Cold" == response
+    assert response == "Cold"
 
 
 @pytest.mark.asyncio
 async def test_can_use_global_behaviour():
     context = RootContext()
-    test_actor_props = Props.from_producer(lambda: LightBulb())
+    test_actor_props = Props.from_producer(LightBulb)
     actor = context.spawn(test_actor_props)
     _ = await context.request_async(actor, PressSwitch())
     response = await context.request_async(actor, HitWithHammer())
-    assert "Smashed!" == response
+    assert response == "Smashed!"
     response = await context.request_async(actor, PressSwitch())
-    assert "Broken" == response
+    assert response == "Broken"
     response = await context.request_async(actor, Touch())
-    assert "OW!" == response
+    assert response == "OW!"
 
 
 @pytest.mark.asyncio
@@ -101,4 +101,4 @@ async def test_pop_behavior_should_restore_pushed_behavior():
     reply_after_push = await context.request_async(pid, None)
     reply_after_pop = await context.request_async(pid, "answertolifetheuniverseandeverything")
 
-    assert "number42answertolifetheuniverseandeverything" == reply + str(reply_after_push) + reply_after_pop
+    assert reply + str(reply_after_push) + reply_after_pop == "number42answertolifetheuniverseandeverything"

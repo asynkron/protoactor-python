@@ -12,7 +12,7 @@ def stack():
 
 
 def test_singleton():
-    class TestSingleton(object, metaclass=singleton):
+    class TestSingleton(metaclass=singleton):
         def __init__(self):
             self.test = ""
 
@@ -23,11 +23,11 @@ def test_singleton():
 
 
 def test_singleton_for_different_classes():
-    class A(object, metaclass=singleton):
+    class A(metaclass=singleton):
         def __init__(self):
             self.a = ""
 
-    class B(object, metaclass=singleton):
+    class B(metaclass=singleton):
         def __init__(self):
             self.b = ""
 
@@ -38,7 +38,7 @@ def test_singleton_for_different_classes():
 
     assert a is a1
     assert b is b1
-    assert not (a is b1)
+    assert not a is b1
 
 
 def test_stack_push_pop(stack):
@@ -54,4 +54,4 @@ def test_stack_push_peek_len(stack):
 
 def test_stack_push_is_empty(stack):
     stack.push("Test data")
-    assert stack.is_empty() == False
+    assert stack.is_empty() is False

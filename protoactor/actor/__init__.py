@@ -1,5 +1,5 @@
+from protoactor.actor.protos_pb2 import PID
 from protoactor.actor.process import ProcessRegistry
-from .protos_pb2 import PID
 
 
 def __tell(self, message):

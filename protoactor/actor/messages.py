@@ -1,8 +1,8 @@
 from abc import ABCMeta
 from typing import Optional
 
-from .restart_statistics import RestartStatistics
 from protoactor.actor.protos_pb2 import PID
+from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.utils import singleton
 
 

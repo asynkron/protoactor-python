@@ -3,10 +3,10 @@ from enum import Enum
 from threading import RLock, Event
 from typing import Optional
 
+from protoactor.mailbox import messages, mailbox_statistics
 from protoactor.mailbox.dispatcher import AbstractDispatcher, AbstractMessageInvoker
 from protoactor.mailbox.mailbox_statistics import AbstractMailBoxStatistics
 from protoactor.mailbox.queue import AbstractQueue, UnboundedMailboxQueue
-from . import mailbox_statistics, messages
 
 
 class MailBoxStatus(Enum):

@@ -99,7 +99,7 @@ class PersistedEvent(Event):
         super(PersistedEvent, self).__init__(data, index)
 
 
-class Persistance(object):
+class Persistance():
     pass
 
 

@@ -25,10 +25,9 @@ class RemoteManager():
         return self.__nodes
 
     def provision_node(self, host='127.0.0.1', port=12000):
-        process = subprocess.Popen("python ./node/node.py --host %s --port %s" % (host, port),
+        process = subprocess.Popen(['python', './node/node.py', '--host', str(host), '--port', str(port)],
                                    stdout=subprocess.PIPE,
-                                   stdin=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
+                                   stdin=subprocess.PIPE)
         address = '%s:%s' % (host, port)
         self.__nodes[address] = process
         time.sleep(3)

@@ -10,7 +10,8 @@ def test_InMemoryProviderState_get_snapshot():
 
     snapshot = loop.run_until_complete(mem_ps.get_snapshot('test_actor_name'))
 
-    assert None == snapshot
+    assert snapshot is None
+
 
 def test_InMemoryProviderState_get_events():
     loop = asyncio.new_event_loop()
@@ -19,7 +20,8 @@ def test_InMemoryProviderState_get_events():
 
     loop.run_until_complete(mem_ps.get_events('test_actor_name', 0, callback_m))
 
-    assert False == callback_m.called
+    assert callback_m.called == False
+
 
 def test_InMemoryProviderState_persist_event():
     loop = asyncio.new_event_loop()

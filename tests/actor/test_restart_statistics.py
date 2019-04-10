@@ -1,6 +1,6 @@
-import pytest
 import datetime
 from datetime import timedelta
+
 from protoactor.actor.restart_statistics import RestartStatistics
 
 

@@ -1,9 +1,8 @@
 import asyncio
 import threading
-from abc import ABCMeta, abstractmethod
-from threading import Thread
 from typing import Callable
-
+from threading import Thread
+from abc import ABCMeta, abstractmethod
 from protoactor.actor.utils import singleton
 
 

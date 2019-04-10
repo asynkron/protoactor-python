@@ -150,7 +150,7 @@ async def test_when_remote_terminated_local_watcher_receives_notification(remote
     process.wait()
 
     root_context.send(local_actor, SendMessageToRemoteActor(remote_actor))
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.2)
 
     async def func1():
         return await root_context.request_async(local_actor,
