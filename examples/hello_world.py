@@ -1,4 +1,5 @@
-from protoactor import actor, context
+from protoactor.actor.props import Props
+from protoactor.actor.actor import Actor, AbstractContext, RootContext
 
 
 class HelloMessage:
@@ -6,14 +7,15 @@ class HelloMessage:
         self.text = text
 
 
-class HelloActor(actor.Actor):
-    async def receive(self, context: context.AbstractContext) -> None:
+class HelloActor(Actor):
+    async def receive(self, context: AbstractContext) -> None:
         message = context.message
         if isinstance(message, HelloMessage):
             print(message.text)
 
 
 if __name__ == "__main__":
-    props = actor.from_producer(lambda: HelloActor())
-    pid = actor.spawn(props)
+    context = RootContext()
+    props = Props.from_producer(HelloActor)
+    pid = context.spawn(props)
     pid.tell(HelloMessage('Hello World!'))

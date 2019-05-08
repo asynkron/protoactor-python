@@ -5,8 +5,9 @@ tox
 pytest-cov
 pytest-xdist
 mypy==0.501
-protobuf==3.0.0
-grpcio
+protobuf==3.6.1
+grpclib==0.2.1
+pytest-asyncio
 
 # Check tha the MANIFEST.in is correct
 check-manifest

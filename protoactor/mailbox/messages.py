@@ -1,4 +1,4 @@
-from protoactor.messages import SystemMessage
+from protoactor.actor.messages import SystemMessage
 
 
 class SuspendMailbox(SystemMessage):
