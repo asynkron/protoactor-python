@@ -3,8 +3,8 @@ import functools
 
 import pytest
 
-from cancel_token import CancelToken, EventLoopMismatch, OperationCancelled
-
+from protoactor.actor.cancel_token import CancelToken
+from protoactor.actor.exceptions import EventLoopMismatch, OperationCancelled
 
 
 def test_token_single():
