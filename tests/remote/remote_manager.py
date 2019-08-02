@@ -1,5 +1,3 @@
-import os
-import signal
 import subprocess
 import time
 
@@ -25,12 +23,12 @@ class RemoteManager():
         return self.__nodes
 
     def provision_node(self, host='127.0.0.1', port=12000):
-        process = subprocess.Popen(['python', './node/node.py', '--host', str(host), '--port', str(port)],
+        process = subprocess.Popen(['python', './remote/node/node.py', '--host', str(host), '--port', str(port)],
                                    stdout=subprocess.PIPE,
                                    stdin=subprocess.PIPE)
         address = '%s:%s' % (host, port)
         self.__nodes[address] = process
-        time.sleep(3)
+        time.sleep(10)
         return address, process
 
     def dispose(self):

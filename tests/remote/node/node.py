@@ -1,16 +1,13 @@
 import asyncio
 import getopt
-import multiprocessing
 import sys
-from time import sleep
 
 from protoactor.actor.actor import Actor, RootContext
-from protoactor.actor.messages import Started
 from protoactor.actor.props import Props
 from protoactor.remote.remote import Remote
 from protoactor.remote.serialization import Serialization
-from tests.remote.messages.protos_pb2 import Ping, Pong
 from tests.remote.messages.protos_pb2 import DESCRIPTOR
+from tests.remote.messages.protos_pb2 import Ping, Pong
 
 
 class EchoActor(Actor):
@@ -21,6 +18,7 @@ class EchoActor(Actor):
     async def receive(self, context):
         if isinstance(context.message, Ping):
             await context.respond(Pong(message="%s:%s %s" % (self._host, self._port, context.message.message)))
+
 
 async def start(argv):
     host = None

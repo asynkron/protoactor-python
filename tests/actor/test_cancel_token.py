@@ -3,11 +3,8 @@ import functools
 
 import pytest
 
-from cancel_token import (
-    CancelToken,
-    EventLoopMismatch,
-    OperationCancelled,
-)
+from cancel_token import CancelToken, EventLoopMismatch, OperationCancelled
+
 
 
 def test_token_single():

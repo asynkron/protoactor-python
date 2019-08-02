@@ -26,9 +26,9 @@ async def test_can_spawn_remote_actor(remote_manager):
     remote_actor_name = str(uuid.uuid4())
     remote_actor_resp = await Remote().spawn_named_async(remote_manager.default_node_address,
                                                          remote_actor_name,
-                                                         'EchoActor', timedelta(seconds=1))
+                                                         'EchoActor', timedelta(seconds=5))
     remote_actor = remote_actor_resp.pid
-    pong = await root_context.request_async(remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=1))
+    pong = await root_context.request_async(remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=5))
     assert "%s Hello" % remote_manager.default_node_address == pong.message
 
 
