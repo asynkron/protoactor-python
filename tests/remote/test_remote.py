@@ -1,4 +1,6 @@
 import asyncio
+import os
+import unittest
 import uuid
 from datetime import timedelta
 
@@ -16,11 +18,13 @@ from tests.remote.remote_manager import RemoteManager
 root_context = RootContext()
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.fixture(scope="session")
 def remote_manager():
     return RemoteManager()
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_can_spawn_remote_actor(remote_manager):
     remote_actor_name = str(uuid.uuid4())
@@ -32,6 +36,7 @@ async def test_can_spawn_remote_actor(remote_manager):
     assert "%s Hello" % remote_manager.default_node_address == pong.message
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_can_send_and_receive_to_existing_remote(remote_manager):
     remote_actor = PID(address=remote_manager.default_node_address, id='EchoActorInstance')
@@ -39,6 +44,7 @@ async def test_can_send_and_receive_to_existing_remote(remote_manager):
     assert "%s Hello" % remote_manager.default_node_address == pong.message
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_when_remote_actor_not_found_request_async_timesout(remote_manager):
     unknown_remote_actor = PID(address=remote_manager.default_node_address, id="doesn't exist")
@@ -46,8 +52,9 @@ async def test_when_remote_actor_not_found_request_async_timesout(remote_manager
         await root_context.request_async(unknown_remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=0.2))
 
     assert 'TimeoutError' in str(e)
-#
 
+
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_can_watch_remote_actor(remote_manager):
     remote_actor = await spawn_remote_actor(remote_manager.default_node_address)
@@ -63,6 +70,7 @@ async def test_can_watch_remote_actor(remote_manager):
     assert await poll_until_true(func)
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_can_watch_multiple_remote_actors(remote_manager):
     remote_actor1 = await spawn_remote_actor(remote_manager.default_node_address)
@@ -88,6 +96,7 @@ async def test_can_watch_multiple_remote_actors(remote_manager):
     assert await poll_until_true(func2)
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_multiple_local_actors_can_watch_remote_actor(remote_manager):
     remote_actor = await spawn_remote_actor(remote_manager.default_node_address)
@@ -113,6 +122,7 @@ async def test_multiple_local_actors_can_watch_remote_actor(remote_manager):
     assert await poll_until_true(func2)
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_can_unwatch_remote_actor(remote_manager):
     remote_actor = await spawn_remote_actor(remote_manager.default_node_address)
@@ -140,6 +150,7 @@ async def test_can_unwatch_remote_actor(remote_manager):
     assert not await poll_until_true(func2)
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.mark.asyncio
 async def test_when_remote_terminated_local_watcher_receives_notification(remote_manager):
     address, process = remote_manager.provision_node("127.0.0.1", 12002)
@@ -160,9 +171,11 @@ async def test_when_remote_terminated_local_watcher_receives_notification(remote
                                                 timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func1)
-    assert await root_context.request_async(local_actor, GetTerminatedMessagesCount(), timeout=timedelta(seconds=5)) == 1
+    assert await root_context.request_async(local_actor, GetTerminatedMessagesCount(),
+                                            timeout=timedelta(seconds=5)) == 1
 
 
+@unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(remote_manager):
     yield
