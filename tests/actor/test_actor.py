@@ -1,3 +1,7 @@
+import asyncio
+import signal
+from datetime import timedelta
+
 import pytest
 
 from protoactor.actor.actor import RootContext
@@ -9,7 +13,7 @@ context = RootContext()
 async def hello_function(context):
     message = context.message
     if isinstance(message, str):
-        context.respond("hey")
+        await context.respond("hey")
 
 
 async def empty_receive(context):
@@ -30,15 +34,14 @@ async def test_request_actor_async_should_raise_timeout_exception_when_timeout_i
     with pytest.raises(TimeoutError) as excinfo:
         props = Props.from_func(empty_receive)
         pid = context.spawn(props)
-        await context.request_async(pid, "", timeout=0.01)
+        await context.request_async(pid, "", timedelta(seconds=1))
 
     assert 'TimeoutError' in str(excinfo)
-
 
 @pytest.mark.asyncio
 async def test_request_actor_async_should_not_raise_timeout_exception_when_result_is_first():
     props = Props.from_func(hello_function)
     pid = context.spawn(props)
-    reply = await context.request_async(pid, "hello", timeout=0.01)
+    reply = await context.request_async(pid, "hello", timedelta(seconds=1))
 
     assert reply == "hey"

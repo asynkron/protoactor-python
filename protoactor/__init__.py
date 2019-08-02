@@ -6,7 +6,7 @@ __version__ = "0.0.1"
 # from .process_registry import ProcessRegistry
 #
 #
-# # from .process import LocalProcess, DeadLettersProcess
+# # from .process import ActorProcess, DeadLettersProcess
 #
 #
 # def __tell(self, message):

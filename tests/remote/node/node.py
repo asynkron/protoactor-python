@@ -20,7 +20,7 @@ class EchoActor(Actor):
 
     async def receive(self, context):
         if isinstance(context.message, Ping):
-            context.respond(Pong(message="%s:%s %s" % (self._host, self._port, context.message.message)))
+            await context.respond(Pong(message="%s:%s %s" % (self._host, self._port, context.message.message)))
 
 async def start(argv):
     host = None

@@ -13,16 +13,15 @@ from protoactor.actor.actor import Actor, ProcessRegistry, GlobalRootContext, Ab
 from protoactor.actor.behavior import Behavior
 from protoactor.actor.event_stream import GlobalEventStream
 from protoactor.actor.exceptions import ProcessNameExistException
-from protoactor.actor.messages import Stopped, Started, Restarting
+from protoactor.actor.messages import Stopped, Started, Restarting, SuspendMailbox, ResumeMailbox
 from protoactor.actor.process import AbstractProcess, DeadLettersProcess
 from protoactor.actor.props import Props
 from protoactor.actor.protos_pb2 import Watch, Unwatch, Terminated, PID, Stop
 from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.supervision import AbstractSupervisorStrategy, AbstractSupervisor, Supervision
 from protoactor.actor.utils import singleton
-from protoactor.mailbox.dispatcher import Dispatchers, GlobalSynchronousDispatcher
-from protoactor.mailbox.mailbox import AbstractMailbox, MailboxFactory
-from protoactor.mailbox.messages import SuspendMailbox, ResumeMailbox
+from protoactor.mailbox.dispatcher import Dispatchers
+from protoactor.mailbox.mailbox import AbstractMailbox
 from protoactor.mailbox.queue import UnboundedMailboxQueue
 from protoactor.remote.exceptions import ActivatorException
 from protoactor.remote.messages import RemoteDeliver, RemoteWatch, RemoteUnwatch, EndpointConnectedEvent, \
@@ -111,10 +110,10 @@ class Remote(metaclass=singleton):
         return await GlobalRootContext().instance.request_async(activator, ActorPidRequest(name=name, kind=kind),
                                                                 timeout=timeout)
 
-    def send_message(self, pid, msg, serializer_id):
+    async def send_message(self, pid, msg, serializer_id):
         message, sender, header = actor.MessageEnvelope.unwrap(msg)
         env = RemoteDeliver(header, message, pid, sender, serializer_id)
-        EndpointManager().remote_deliver(env)
+        await EndpointManager().remote_deliver(env)
 
     def __spawn_activator(self):
         props = Props().from_producer(Activator) \
@@ -134,19 +133,19 @@ class RemoteProcess(AbstractProcess):
     def __init__(self, pid: 'PID'):
         self._pid = pid
 
-    def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
-        self.send(message)
+    async def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
+        await self.send(message)
 
-    def send_system_message(self, pid: 'PID', message: object):
-        self.send(message)
+    async def send_system_message(self, pid: 'PID', message: object):
+        await self.send(message)
 
-    def send(self, message: any):
+    async def send(self, message: any):
         if isinstance(message, Watch):
-            EndpointManager().remote_watch(RemoteWatch(message.watcher, self._pid))
+            await EndpointManager().remote_watch(RemoteWatch(message.watcher, self._pid))
         elif isinstance(message, Unwatch):
-            EndpointManager().remote_unwatch(RemoteUnwatch(message.watcher, self._pid))
+            await EndpointManager().remote_unwatch(RemoteUnwatch(message.watcher, self._pid))
         else:
-            Remote().send_message(self._pid, message, -1)
+            await Remote().send_message(self._pid, message, -1)
 
 
 class EndpointManager(metaclass=singleton):
@@ -159,10 +158,8 @@ class EndpointManager(metaclass=singleton):
 
     def start(self) -> None:
         # self.__logger.log_debug('Started EndpointManager')
-        props = Props().from_producer(EndpointSupervisor) \
-            .with_guardian_supervisor_strategy(Supervision().always_restart_strategy) \
-            .with_dispatcher(Dispatchers().synchronous_dispatcher) \
-            .with_mailbox(MailboxFactory().create_unbounded_synchronous_mailbox)
+        props = Props().from_producer(EndpointSupervisor)\
+            .with_guardian_supervisor_strategy(Supervision().always_restart_strategy)
 
         self._endpoint_supervisor = GlobalRootContext().instance.spawn_named(props, 'EndpointSupervisor')
         self._endpoint_conn_evn_sub = GlobalEventStream().instance.subscribe(self.__on_endpoint_connected,
@@ -178,40 +175,37 @@ class EndpointManager(metaclass=singleton):
         self._endpoint_supervisor.stop()
         # self.__logger.log_debug('Stopped EndpointManager')
 
-    def remote_watch(self, msg: RemoteWatch) -> None:
-        endpoint = self.__ensure_connected(msg.watchee.address)
-        GlobalRootContext().instance.send(endpoint.watcher, msg)
+    async def remote_watch(self, msg: RemoteWatch) -> None:
+        endpoint = await self.__ensure_connected(msg.watchee.address)
+        await GlobalRootContext().instance.send(endpoint.watcher, msg)
 
-    def remote_unwatch(self, msg: RemoteUnwatch) -> None:
-        endpoint = self.__ensure_connected(msg.watchee.address)
-        GlobalRootContext().instance.send(endpoint.watcher, msg)
+    async def remote_unwatch(self, msg: RemoteUnwatch) -> None:
+        endpoint = await self.__ensure_connected(msg.watchee.address)
+        await GlobalRootContext().instance.send(endpoint.watcher, msg)
 
-    def remote_deliver(self, msg: RemoteDeliver) -> None:
-        endpoint = self.__ensure_connected(msg.target.address)
-        GlobalRootContext().instance.send(endpoint.writer, msg)
+    async def remote_deliver(self, msg: RemoteDeliver) -> None:
+        endpoint = await self.__ensure_connected(msg.target.address)
+        await GlobalRootContext().instance.send(endpoint.writer, msg)
 
-    def remote_terminate(self, msg: RemoteTerminate):
-        endpoint = self.__ensure_connected(msg.watchee.address)
-        GlobalRootContext().instance.send(endpoint.watcher, msg)
+    async def remote_terminate(self, msg: RemoteTerminate):
+        endpoint = await self.__ensure_connected(msg.watchee.address)
+        await GlobalRootContext().instance.send(endpoint.watcher, msg)
 
     async def __on_endpoint_connected(self, msg: EndpointConnectedEvent) -> None:
-        endpoint = self.__ensure_connected(msg.address)
-        GlobalRootContext().instance.send(endpoint.watcher, msg)
+        endpoint = await self.__ensure_connected(msg.address)
+        await GlobalRootContext().instance.send(endpoint.watcher, msg)
 
     async def __on_endpoint_terminated(self, msg: EndpointTerminatedEvent) -> None:
         endpoint = self._connections.get(msg.address)
         if endpoint is not None:
-            GlobalRootContext().instance.send(endpoint.watcher, msg)
-            GlobalRootContext().instance.send(endpoint.writer, msg)
+            await GlobalRootContext().instance.send(endpoint.watcher, msg)
+            await GlobalRootContext().instance.send(endpoint.writer, msg)
             del self._connections[msg.address]
 
-    def __ensure_connected(self, address) -> Endpoint:
+    async def __ensure_connected(self, address) -> Endpoint:
         endpoint = self._connections.get(address)
         if endpoint is None:
-            async def test():
-                return await GlobalRootContext().instance.request_async(self._endpoint_supervisor, address)
-
-            endpoint = GlobalSynchronousDispatcher().schedule(test)
+            endpoint = await GlobalRootContext().instance.request_async(self._endpoint_supervisor, address)
             self._connections[address] = endpoint
         return endpoint
 
@@ -241,19 +235,19 @@ class EndpointReader(RemotingBase):
                 message = Serialization().deserialize(type_name, envelope.message_data, envelope.serializer_id)
 
                 if isinstance(message, Terminated):
-                    EndpointManager().remote_terminate(RemoteTerminate(target, message.who))
+                    await EndpointManager().remote_terminate(RemoteTerminate(target, message.who))
                 elif isinstance(message, Watch):
-                    target.send_system_message(message)
+                    await target.send_system_message(message)
                 elif isinstance(message, Unwatch):
-                    target.send_system_message(message)
+                    await target.send_system_message(message)
                 elif isinstance(message, Stop):
-                    target.send_system_message(message)
+                    await target.send_system_message(message)
                 else:
                     header = None
                     if envelope.message_header is not None:
                         header = proto.MessageHeader(envelope.message_header.header_data)
                     local_envelope = proto.MessageEnvelope(message, envelope.sender, header)
-                    GlobalRootContext().instance.send(target, local_envelope)
+                    await GlobalRootContext().instance.send(target, local_envelope)
 
         await stream.send_message(Unit())
 
@@ -263,83 +257,83 @@ class EndpointReader(RemotingBase):
 
 class EndpointWatcher(Actor):
     def __init__(self, address):
-        self.__address = address
-        self.__behavior = Behavior(self.connected)
-        self.__logger = None
+        self._address = address
+        self._behavior = Behavior(self.connected)
+        self._logger = None
         self._watched = {}
 
     async def receive(self, context: AbstractContext) -> None:
-        await self.__behavior.receive_async(context)
+        await self._behavior.receive_async(context)
 
     async def connected(self, context: AbstractContext) -> None:
         message = context.message
         if isinstance(message, RemoteTerminate):
-            self.__process_remote_terminate_message_in_connected_state(message)
+            await self.__process_remote_terminate_message_in_connected_state(message)
         elif isinstance(message, EndpointTerminatedEvent):
-            self.__process_endpoint_terminated_event_message_in_connected_state(context, message)
+            await self.__process_endpoint_terminated_event_message_in_connected_state(context, message)
         elif isinstance(message, RemoteUnwatch):
-            self.__process_remote_unwatch_message_in_connected_state(message)
+            await self.__process_remote_unwatch_message_in_connected_state(message)
         elif isinstance(message, RemoteWatch):
-            self.__process_remote_watch_message_in_connected_state(message)
+            await self.__process_remote_watch_message_in_connected_state(message)
         elif isinstance(message, Stopped):
             self.__process_stopped_message_in_connected_state()
 
     async def terminated(self, context: AbstractContext) -> None:
         message = context.message
         if isinstance(message, RemoteWatch):
-            self.__process_remote_watch_message_in_terminated_state(message)
+            await self.__process_remote_watch_message_in_terminated_state(message)
         elif isinstance(message, EndpointConnectedEvent):
             self.__process_endpoint_connected_event_message_in_terminated_state()
 
-    def __process_remote_terminate_message_in_connected_state(self, msg):
+    async def __process_remote_terminate_message_in_connected_state(self, msg):
         if msg.watcher.id in self._watched:
             pid_set = self._watched[msg.watcher.id]
             pid_set.remove(msg.watchee)
             if len(pid_set) == 0:
                 del self._watched[msg.watcher.id]
 
-        msg.watcher.send_system_message(Terminated(who=msg.watchee))
+        await msg.watcher.send_system_message(Terminated(who=msg.watchee))
 
-    def __process_endpoint_terminated_event_message_in_connected_state(self, context, msg):
+    async def __process_endpoint_terminated_event_message_in_connected_state(self, context, msg):
         # self.__logger.log_debug()
         for watched_id, pid_set in self._watched.items():
             watcher_pid = PID(address=ProcessRegistry().address, id=watched_id)
             watcher_ref = ProcessRegistry().get(watcher_pid)
             if watcher_ref != DeadLettersProcess():
                 for pid in pid_set:
-                    watcher_pid.send_system_message(Terminated(who=pid, address_terminated=True))
+                    await watcher_pid.send_system_message(Terminated(who=pid, address_terminated=True))
 
         self._watched.clear()
-        self.__behavior.become(self.terminated)
+        self._behavior.become(self.terminated)
 
-        context.my_self.stop()
+        await context.my_self.stop()
 
-    def __process_remote_unwatch_message_in_connected_state(self, msg):
+    async def __process_remote_unwatch_message_in_connected_state(self, msg):
         if msg.watcher.id in self._watched:
             pid_set = self._watched[msg.watcher.id]
             pid_set.remove(msg.watchee)
             if len(pid_set) == 0:
                 del self._watched[msg.watcher.id]
 
-        Remote().send_message(msg.watchee, Unwatch(watcher=msg.watcher), -1)
+        await Remote().send_message(msg.watchee, Unwatch(watcher=msg.watcher), -1)
 
-    def __process_remote_watch_message_in_connected_state(self, msg):
+    async def __process_remote_watch_message_in_connected_state(self, msg):
         if msg.watcher.id in self._watched:
             self._watched[msg.watcher.id].append(msg.watchee)
         else:
             self._watched[msg.watcher.id] = [msg.watchee]
 
-        Remote().send_message(msg.watchee, Watch(watcher=msg.watcher), -1)
+        await Remote().send_message(msg.watchee, Watch(watcher=msg.watcher), -1)
 
     def __process_stopped_message_in_connected_state(self):
-        self.__logger.log_debug("")
+        self._logger.log_debug("")
 
-    def __process_remote_watch_message_in_terminated_state(self, msg):
-        msg.watcher.send_system_message(Terminated(address_terminated=True, who=msg.watchee))
+    async def __process_remote_watch_message_in_terminated_state(self, msg):
+        await msg.watcher.send_system_message(Terminated(address_terminated=True, who=msg.watchee))
 
     def __process_endpoint_connected_event_message_in_terminated_state(self):
-        self.__logger.log_debug("")
-        self.__behavior.become(self.connected)
+        self._logger.log_debug("")
+        self._behavior.become(self.connected)
 
 
 class EndpointWriter(Actor):
@@ -447,20 +441,20 @@ class EndpointWriter(Actor):
 
 class EndpointWriterMailbox(AbstractMailbox):
     def __init__(self, batch_size):
-        self.__batch_size = batch_size
-        self.__system_messages = UnboundedMailboxQueue()
-        self.__user_messages = UnboundedMailboxQueue()
+        self._batch_size = batch_size
+        self._system_messages = UnboundedMailboxQueue()
+        self._user_messages = UnboundedMailboxQueue()
         self._dispatcher = None
         self._invoker = None
-        self.__event = threading.Event()
-        self.__suspended = False
+        self._event = threading.Event()
+        self._suspended = False
 
     def post_user_message(self, msg):
-        self.__user_messages.push(msg)
+        self._user_messages.push(msg)
         self.__schedule()
 
     def post_system_message(self, msg):
-        self.__system_messages.push(msg)
+        self._system_messages.push(msg)
         self.__schedule()
 
     def register_handlers(self, invoker, dispatcher):
@@ -473,36 +467,36 @@ class EndpointWriterMailbox(AbstractMailbox):
 
     async def __run(self):
         while True:
-            self.__event.wait()
+            self._event.wait()
             await self.__process_messages()
-            self.__event.clear()
+            self._event.clear()
 
-            if self.__system_messages.has_messages() or self.__user_messages.has_messages():
+            if self._system_messages.has_messages() or self._user_messages.has_messages():
                 self.__schedule()
 
     def __schedule(self):
-        self.__event.set()
+        self._event.set()
 
     async def __process_messages(self):
         message = None
         try:
             batch = []
-            sys = self.__system_messages.pop()
+            sys = self._system_messages.pop()
             if sys is not None:
                 if isinstance(sys, SuspendMailbox):
-                    self.__suspended = True
+                    self._suspended = True
                 elif isinstance(sys, ResumeMailbox):
-                    self.__suspended = False
+                    self._suspended = False
                 else:
                     message = sys
                     await self._invoker.invoke_system_message(sys)
 
-            if not self.__suspended:
+            if not self._suspended:
                 batch.clear()
 
                 while True:
-                    msg = self.__user_messages.pop()
-                    if msg is not None or self.__batch_size <= len(batch):
+                    msg = self._user_messages.pop()
+                    if msg is not None or self._batch_size <= len(batch):
                         batch.append(msg)
                     else:
                         break
@@ -511,7 +505,7 @@ class EndpointWriterMailbox(AbstractMailbox):
                     message = batch
                     await self._invoker.invoke_user_message(batch)
         except Exception as e:
-            self._invoker.escalate_failure(e, message)
+            await self._invoker.escalate_failure(e, message)
 
 
 class EndpointSupervisor(Actor, AbstractSupervisorStrategy):
@@ -524,7 +518,7 @@ class EndpointSupervisor(Actor, AbstractSupervisorStrategy):
             address = str(message)
             watcher = self.__spawn_watcher(address, context)
             writer = self.__spawn_writer(address, context)
-            context.respond(Endpoint(watcher, writer))
+            await context.respond(Endpoint(watcher, writer))
 
     def __spawn_watcher(self, address: str, context: AbstractContext) -> PID:
         watcher_props = Props.from_producer(lambda: EndpointWatcher(address))
@@ -555,16 +549,16 @@ class Activator(Actor):
             try:
                 pid = GlobalRootContext().instance.spawn_named(props, name)
                 response = ActorPidResponse(pid=pid)
-                context.respond(response)
+                await context.respond(response)
             except ProcessNameExistException as ex:
                 response = ActorPidResponse(pid=ex.pid, status_code=int(ResponseStatusCode.ProcessNameAlreadyExist))
-                context.respond(response)
+                await context.respond(response)
             except ActivatorException as ex:
                 response = ActorPidResponse(status_code=ex.code)
-                context.respond(response)
+                await context.respond(response)
                 if not ex.do_not_throw:
                     raise Exception()
             except Exception:
                 response = ActorPidResponse(status_code=int(ResponseStatusCode.Error))
-                context.respond(response)
+                await context.respond(response)
                 raise Exception()

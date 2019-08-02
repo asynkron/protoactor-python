@@ -1,12 +1,11 @@
 from abc import ABCMeta, abstractmethod
-from typing import List
 from enum import Enum
+from typing import List
 
 from protoactor.actor.protos_pb2 import PID
 from protoactor.actor.utils import singleton
-from .restart_statistics import RestartStatistics
 from .log import get_logger
-from datetime import timedelta
+from .restart_statistics import RestartStatistics
 
 
 class SupervisorDirective(Enum):
@@ -19,19 +18,19 @@ class SupervisorDirective(Enum):
 class AbstractSupervisor(metaclass=ABCMeta):
 
     @abstractmethod
-    def escalate_failure(self, who: 'PID', reason: Exception) -> None:
+    async def escalate_failure(self, who: 'PID', reason: Exception) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
     @abstractmethod
-    def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
+    async def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
     @abstractmethod
-    def stop_children(self, *pids: List['PID']) -> None:
+    async def stop_children(self, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
     @abstractmethod
-    def resume_children(self, *pids: List['PID']) -> None:
+    async def resume_children(self, *pids: List['PID']) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
     @abstractmethod
@@ -149,12 +148,9 @@ class AlwaysRestartStrategy(AbstractSupervisorStrategy):
 
 class Supervision(metaclass=singleton):
     @property
-    def default_strategy(self) -> OneForOneStrategy:
+    def default_strategy(self) -> AbstractSupervisorStrategy:
         return OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, 10)
 
     @property
     def always_restart_strategy(self) -> AlwaysRestartStrategy:
         return AlwaysRestartStrategy()
-
-
-default_strategy = OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, timedelta(seconds=10))

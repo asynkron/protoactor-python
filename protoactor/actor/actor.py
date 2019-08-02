@@ -1,26 +1,30 @@
-import threading
+import asyncio
 from abc import abstractmethod, ABCMeta
 from asyncio import Task
 from datetime import timedelta
 from enum import Enum
-
-from typing import Callable, List
+from functools import reduce
+from inspect import signature
+from threading import Timer
+from typing import Callable, List, Awaitable, Any
 
 from protoactor.actor import messages
+from protoactor.actor.cancel_token import CancelToken
 from protoactor.actor.log import get_logger
 from protoactor.actor.message_envelope import MessageEnvelope
-from protoactor.actor.process import Guardians, FutureProcess, ProcessRegistry
-from protoactor.actor.invoker import AbstractInvoker
 from protoactor.actor.message_header import MessageHeader
 
+from protoactor.actor.process import Guardians, FutureProcess, ProcessRegistry
 from protoactor.actor.protos_pb2 import Terminated, Watch, Unwatch, Stop, PID
 from protoactor.actor.restart_statistics import RestartStatistics
-from protoactor.actor.supervision import AbstractSupervisor, default_strategy
 from protoactor.actor.utils import singleton
-from protoactor.mailbox.dispatcher import AbstractMessageInvoker
-from protoactor.mailbox.messages import ResumeMailbox, SuspendMailbox
-from protoactor.actor.messages import Restarting, Started, Stopped, Continuation, ReceiveTimeout, PoisonPill, Failure, \
-    Restart
+from protoactor.mailbox.dispatcher import AbstractMessageInvoker, Dispatchers
+from protoactor.actor.supervision import AbstractSupervisor, Supervision, \
+    AbstractSupervisorStrategy
+from protoactor.actor.messages import Restarting, Started, Stopped, \
+    Continuation, ReceiveTimeout, PoisonPill, Failure, Restart, \
+    SystemMessage, NotInfluenceReceiveTimeout, ResumeMailbox, \
+    SuspendMailbox
 
 is_import = False
 if is_import:
@@ -37,11 +41,11 @@ class ContextState(Enum):
 
 class AbstractSenderContext(metaclass=ABCMeta):
     def __init__(self):
-        self.__headers = None
+        self._headers = None
 
     @property
     def headers(self) -> MessageHeader:
-        return self.__headers
+        return self._headers
 
     @property
     @abstractmethod
@@ -49,15 +53,18 @@ class AbstractSenderContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def send(self, target: PID, message: any):
+    async def send(self, target: PID, message: any):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def request(self, target: PID, message: any):
+    async def request(self, target: PID, message: any):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def request_async(self, target: PID, message: any):
+    async def request_async(self, target: PID,
+                            message: object,
+                            timeout: timedelta = None,
+                            cancellation_token: CancelToken = None) -> asyncio.Future:
         raise NotImplementedError("Should Implement this method")
 
 
@@ -124,7 +131,7 @@ class AbstractContext(AbstractSenderContext, AbstractReceiverContext, AbstractSp
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def respond(self, message: object):
+    async def respond(self, message: object):
         raise NotImplementedError("Should Implement this method")
 
     @property
@@ -133,11 +140,11 @@ class AbstractContext(AbstractSenderContext, AbstractReceiverContext, AbstractSp
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def watch(self, pid: PID):
+    async def watch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def unwatch(self, pid: PID):
+    async def unwatch(self, pid: PID):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -153,28 +160,34 @@ class AbstractContext(AbstractSenderContext, AbstractReceiverContext, AbstractSp
     #     raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    def tell(self, target: PID, message: object):
-        raise NotImplementedError("Should Implement this method")
-
-    @abstractmethod
     def reenter_after(self, target: Task, action: Callable):
         raise NotImplementedError("Should Implement this method")
 
 
+class Actor():
+    @abstractmethod
+    async def receive(self, context: AbstractContext) -> None:
+        pass
+
+
 class RootContext(AbstractRootContext):
-    def __init__(self, headers=None, sender_middleware=None):
+    def __init__(self, message_header=MessageHeader(), middleware=None):
         super().__init__()
-        self.__headers = headers
-        self.__sender_middleware = sender_middleware
         self._message = None
+        self._headers = message_header
+        if middleware is None:
+            self._sender_middleware = None
+        else:
+            self._sender_middleware = reduce(lambda inner, outer: outer(inner), list(reversed(middleware)),
+                                             self.default_sender)
 
     @property
     def headers(self):
-        return self.__headers
+        return self._headers
 
     @property
     def sender_middleware(self):
-        return self.__sender_middleware
+        return self._sender_middleware
 
     @property
     def message(self):
@@ -201,44 +214,47 @@ class RootContext(AbstractRootContext):
     def with_sender_middleware(self, middleware):
         return self.__copy_with({'_Props__sender_middleware': middleware})
 
-    def default_sender(self, context, target, message):
-        target.send_user_message(message)
+    async def default_sender(self, context, target, message):
+        await target.send_user_message(message)
 
-    def send(self, target, message):
-        self.send_user_message(target, message)
+    async def send(self, target, message):
+        await self.send_user_message(target, message)
 
-    def request(self, target, message, sender=None):
+    async def request(self, target, message, sender=None):
         if sender is None:
-            self.send_user_message(target, message)
+            await self.send_user_message(target, message)
         else:
-            self.send(target, MessageEnvelope(message, sender, None))
+            await self.send(target, MessageEnvelope(message, sender, None))
 
-    async def request_async(self, target, message, cancellation_token=None, timeout=None):
-        if cancellation_token is not None and timeout is None:
+    async def request_async(self, target: PID, message: object, timeout: timedelta = None,
+                            cancellation_token: CancelToken = None) -> asyncio.Future:
+        if timeout is None and cancellation_token is None:
+            future = FutureProcess()
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            await self.send_user_message(target, message_envelope)
+            return await future.task
+        elif timeout is not None and cancellation_token is None:
+            future = FutureProcess()
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            await self.send_user_message(target, message_envelope)
+            return await CancelToken('token', asyncio.get_event_loop()).cancellable_wait(future.task,
+                                                                                         timeout=timeout.total_seconds())
+        elif timeout is None and cancellation_token is not None:
             future = FutureProcess(cancellation_token)
             message_envelope = MessageEnvelope(message, future.pid, None)
-            self.send_user_message(target, message_envelope)
-            return await future.task
-        elif cancellation_token is None and timeout is not None:
-            future = FutureProcess()
-            message_envelope = MessageEnvelope(message, future.pid, None)
-            self.send_user_message(target, message_envelope)
-            await future.cancellable_wait(timeout)
+            await self.send_user_message(target, message_envelope)
             return await future.task
         else:
-            future = FutureProcess()
+            future = FutureProcess(cancellation_token)
             message_envelope = MessageEnvelope(message, future.pid, None)
-            self.send_user_message(target, message_envelope)
-            return await future.task
+            await self.send_user_message(target, message_envelope)
+            return await cancellation_token.cancellable_wait(future.task, timeout=timeout.total_seconds())
 
-    def send_user_message(self, target, message):
-        if self.__sender_middleware is not None:
-            if isinstance(message, MessageEnvelope):
-                self.__sender_middleware(self, target, message)
-            else:
-                self.__sender_middleware(self, target, MessageEnvelope(message, None, None))
+    async def send_user_message(self, target, message):
+        if self._sender_middleware is not None:
+            await self._sender_middleware(self, target, MessageEnvelope.wrap(message))
         else:
-            target.send_user_message(message)
+            await target.send_user_message(message)
 
     def __copy_with(self, new_params):
         params = self.__dict__
@@ -252,136 +268,238 @@ class RootContext(AbstractRootContext):
         return RootContext(**_params)
 
 
-class ActorContext(AbstractContext, AbstractInvoker, AbstractSupervisor, AbstractMessageInvoker):
-
-    def __init__(self, producer: Callable[[], 'Actor'], supervisor_strategy, middleware, parent: PID) -> None:
-        super().__init__()
-        self.__producer = producer
-        self.__supervisor_strategy = supervisor_strategy
-        self.__middleware = middleware
-        self._parent = parent
-
-        self.__stopping = False
-        self.__restarting = False
-        self.__receive = None
-        self.__restart_statistics = None
-
-        self._receive_timeout = timedelta(milliseconds=0)
-        self.__behaviour = []
-
-        self.__timer = None
-        self.__stash = []
-        self.__state = ContextState.none
-        self.__children = []
-        self.__watchers = []
-        self.__message_or_envelope = None
-
-        self._incarnate_actor()
-        self.__logger = get_logger('ActorContext')
-
-    @property
-    def message(self) -> any:
-        return MessageEnvelope.unwrap_message(self.__message_or_envelope)
-
-    @property
-    def sender(self) -> PID:
-        return MessageEnvelope.unwrap_sender(self.__message_or_envelope)
+class ActorContextExtras():
+    def __init__(self, context: AbstractContext):
+        self._children = []
+        self._receive_timeout_timer = None
+        self._stash = []
+        self._watchers = []
+        self._context = context
 
     @property
     def children(self) -> List[PID]:
-        return self.__children
+        return self._children
 
-    def watch(self, pid: PID):
-        pid.send_system_message(Watch(watcher=self.my_self))
+    @property
+    def receive_timeout_timer(self) -> Timer:
+        return self._receive_timeout_timer
 
-    def unwatch(self, pid: PID):
-        pid.send_system_message(Unwatch(watcher=self.my_self))
+    @property
+    def restart_statistics(self) -> RestartStatistics:
+        return RestartStatistics(0, None)
+
+    @property
+    def stash(self) -> List[object]:
+        return self._stash
+
+    @property
+    def watchers(self) -> List[PID]:
+        return self._watchers
+
+    @property
+    def context(self) -> AbstractContext:
+        return self._context
+
+    def init_receive_timeout_timer(self, timer: Timer) -> None:
+        self._receive_timeout_timer = timer
+
+    def reset_receive_timeout_timer(self) -> None:
+        self._receive_timeout_timer.cancel()
+        self._receive_timeout_timer = Timer(self._receive_timeout_timer.interval, self._receive_timeout_timer.function)
+        self._receive_timeout_timer.start()
+
+    def stop_receive_timeout_timer(self) -> None:
+        self._receive_timeout_timer.cancel()
+
+    def kill_receive_timeout_timer(self) -> None:
+        self._receive_timeout_timer.cancel()
+        self._receive_timeout_timer = None
+
+    def add_child(self, pid: PID) -> None:
+        if pid not in self._children:
+            self._children.append(pid)
+
+    def remove_child(self, pid: PID) -> None:
+        if pid in self._children:
+            self._children.remove(pid)
+
+    def watch(self, pid: PID) -> None:
+        if pid not in self._watchers:
+            self._watchers.append(pid)
+
+    def unwatch(self, pid: PID) -> None:
+        if pid in self._watchers:
+            self._watchers.remove(pid)
+
+
+class ActorContext(AbstractContext, AbstractSupervisor, AbstractMessageInvoker):
+    def __init__(self, props: 'Props', parent: PID) -> None:
+        super().__init__()
+        self._props = props
+        self._parent = parent
+
+        self._empty_children = []
+        self._extras = None
+        self._message_or_envelope = None
+        self._state = None
+
+        self._logger = get_logger('ActorContext')
+        self._receive_timeout = timedelta()
+
+        self.__incarnate_actor()
+
+    @property
+    def children(self) -> List[PID]:
+        if self._extras is not None:
+            return self._extras.children
+        else:
+            return self._empty_children
+
+    @property
+    def message(self) -> any:
+        return MessageEnvelope.unwrap_message(self._message_or_envelope)
+
+    @property
+    def sender(self) -> PID:
+        return MessageEnvelope.unwrap_sender(self._message_or_envelope)
+
+    @property
+    def headers(self) -> PID:
+        return MessageEnvelope.unwrap_header(self._message_or_envelope)
+
+    def stash(self) -> None:
+        self._ensure_extras().stash.append(self.message)
+
+    async def respond(self, message: object) -> None:
+        await self.send(self.sender, message)
 
     def spawn(self, props: 'Props') -> PID:
         p_id = ProcessRegistry().next_id()
         return self.spawn_named(props, p_id)
 
-    def set_behavior(self, receive: Callable[['Actor', AbstractContext], Task]):
-        self.__behaviour.clear()
-        self.__behaviour.append(receive)
-        self.__receive = receive
-
-    def respond(self, message: object):
-        self.send(self.sender, message)
-
-    def spawn_named(self, props: 'Props', name: str) -> PID:
-        # TODO: check for guardian
-
-        pid = props.spawn('{0}/{1}'.format(self.my_self, name), self.my_self)
-        self.__children.append(pid)
-        return pid
-
     def spawn_prefix(self, props: 'Props', prefix: str) -> PID:
         p_id = prefix + ProcessRegistry().next_id()
         return self.spawn_named(props, p_id)
 
-    def stash(self):
-        self.__stash.append(self.message)
+    def spawn_named(self, props: 'Props', name: str) -> PID:
+        if props.guardian_strategy is not None:
+            raise ValueError('Props used to spawn child cannot have GuardianStrategy.')
 
-    async def receive(self, envelope: object, timeout: timedelta = None):
-        if timeout is None:
-            self.__message_or_envelope = envelope
-            return self.__middleware(self) if self.__middleware is not None else self.__default_receive(self)
+        pid = props.spawn('{0}/{1}'.format(self.my_self, name), self.my_self)
+        self._ensure_extras().add_child(pid)
+        return pid
 
-    async def request_async(self, target: PID, message: object):
-        future = FutureProcess()
-        message_envelope = MessageEnvelope(message, future.pid, None)
-        self.__send_user_message(target, message_envelope)
-        return future.task
+    async def watch(self, pid: PID) -> None:
+        await pid.send_system_message(Watch(watcher=self.my_self))
 
-    def send(self, target: PID, message: any):
-        self.__send_user_message(target, message)
+    async def unwatch(self, pid: PID) -> None:
+        await pid.send_system_message(Unwatch(watcher=self.my_self))
 
-    def tell(self, target: PID, message: any):
-        self.__send_user_message(target, message)
-
-    def request(self, message: any, target: PID):
-        message_envelope = MessageEnvelope(message, self.my_self, None)
-        self.__send_user_message(target, message_envelope)
-
-    def set_receive_timeout(self, receive_timeout: timedelta) -> None:
-        if receive_timeout == self.receive_timeout:
+    def set_receive_timeout(self, duration: timedelta) -> None:
+        if duration.total_seconds() <= 0:
+            raise ValueError('Duration must be greater than zero')
+        if duration == self.receive_timeout:
             return None
 
         self.__stop_receive_timeout()
-        self._receive_timeout = receive_timeout
+        self._receive_timeout = duration
 
-        if self.__timer is None:
-            self.__timer = threading.Timer(self.__get_receive_timeout_seconds(), self._receive_timeout_callback)
+        self._ensure_extras()
+        if self._extras.receive_timeout_timer is None:
+            self._extras.init_receive_timeout_timer(Timer(self._receive_timeout.total_seconds(),
+                                                          self.__receive_timeout_callback))
         else:
-            self.reset_receive_timeout()
+            self.__reset_receive_timeout()
 
-    def _incarnate_actor(self):
-        self.__state = ContextState.Alive
-        self._actor = self.__producer()
-        self.set_behavior(self.actor.receive)
+    def cancel_receive_timeout(self):
+        if self._extras.receive_timeout_timer is None:
+            return
 
-    def __get_receive_timeout_seconds(self):
-        return self.receive_timeout.total_seconds()
+        self.__stop_receive_timeout()
+        self._extras.kill_receive_timeout_timer()
 
-    def resume_children(self, *pids: List['PID']) -> None:
+        self._receive_timeout = None
+
+    async def send(self, target: PID, message: any) -> None:
+        await self.__send_user_message(target, message)
+
+    async def forward(self, target: PID) -> None:
+        if isinstance(self._message_or_envelope, SystemMessage):
+            self._logger.log_warning('SystemMessage cannot be forwarded. {0}'.format(self._message_or_envelope))
+            return
+        await self.__send_user_message(target, self._message_or_envelope)
+
+    async def request(self, target: PID, message: any) -> None:
+        message_envelope = MessageEnvelope(message, self.my_self, None)
+        await self.__send_user_message(target, message_envelope)
+
+    def reenter_after(self, target: Callable[[], Awaitable[Any]], action: Callable[[Any], None]) -> None:
+        async def run(msg):
+            result = await target()
+            if len(list(signature(action).parameters)) > 0:
+                async def fn1():
+                    return await action(result)
+
+                await self.my_self.send_system_message(Continuation(fn1, msg))
+            else:
+                async def fn2():
+                    return await action()
+
+                await self.my_self.send_system_message(Continuation(fn2, msg))
+
+        Dispatchers().default_dispatcher.schedule(run, msg=self._message_or_envelope)
+
+    async def request_async(self, target: PID, message: object, timeout: timedelta = None,
+                            cancellation_token: CancelToken = None) -> asyncio.Future:
+        if timeout is None and cancellation_token is None:
+            future = FutureProcess()
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            await self.__send_user_message(target, message_envelope)
+            return await future.task
+        elif timeout is not None and cancellation_token is None:
+            future = FutureProcess()
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            await self.__send_user_message(target, message_envelope)
+            return await CancelToken('token', asyncio.get_event_loop()).cancellable_wait(future.task,
+                                                                                         timeout=timeout.total_seconds()
+                                                                                         )
+        elif timeout is None and cancellation_token is not None:
+            future = FutureProcess(cancellation_token)
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            await self.__send_user_message(target, message_envelope)
+            return await future.task
+        else:
+            future = FutureProcess(cancellation_token)
+            message_envelope = MessageEnvelope(message, future.pid, None)
+            await self.__send_user_message(target, message_envelope)
+            return await cancellation_token.cancellable_wait(future.task, timeout=timeout.total_seconds())
+
+    async def escalate_failure(self, reason: Exception, who: 'PID'):
+        failure = Failure(self.my_self, reason, self._ensure_extras().restart_statistics)
+        await self.my_self.send_system_message(SuspendMailbox())
+        if self.parent is None:
+            self.__handle_root_failure(failure)
+        else:
+            await self.parent.send_system_message(failure)
+
+    async def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
         for pid in pids:
-            pid.send_system_message(ResumeMailbox())
+            await pid.send_system_message(Restart(reason))
 
-    def stop_children(self, *pids: List['PID']) -> None:
+    async def stop_children(self, *pids: List['PID']) -> None:
         for pid in pids:
-            pid.send_system_message(Stop())
+            await pid.send_system_message(Stop())
 
-    def restart_children(self, reason: Exception, *pids: List['PID']) -> None:
+    async def resume_children(self, *pids: List['PID']) -> None:
         for pid in pids:
-            pid.send_system_message(Restart(reason))
+            await pid.send_system_message(ResumeMailbox())
 
     async def invoke_system_message(self, message: any) -> None:
         try:
             if isinstance(message, messages.Started):
                 return await self.invoke_user_message(message)
             elif isinstance(message, Stop):
-                await self.__handle_stop()
+                await self.__initiate_stop()
             elif isinstance(message, Terminated):
                 await self.__handle_terminated(message)
             elif isinstance(message, Watch):
@@ -391,115 +509,135 @@ class ActorContext(AbstractContext, AbstractInvoker, AbstractSupervisor, Abstrac
             elif isinstance(message, messages.Failure):
                 return await self.__handle_failure(message)
             elif isinstance(message, messages.Restart):
-                return await self.handle_restart()
+                return await self.__handle_restart()
             elif isinstance(message, SuspendMailbox):
                 return None
             elif isinstance(message, ResumeMailbox):
                 return None
+            elif isinstance(message, Continuation):
+                self._message_or_envelope = message.message
+                return await message.action()
             else:
-                self.__logger.warn("Unknown system message {0}".format(message))
+                self._logger.warn("Unknown system message {0}".format(message))
                 return None
-
         except Exception as e:
-            # self.__logger.error("Error handling SystemMessage {0}".format(str(e)))
-            # TODO: .Net implementation is just throwing exception upper.
-            self.escalate_failure(e, message)
-
-    def __send_user_message(self, target, message):
-        # TODO: check for middleware
-
-        target.send_user_message(message)
+            self._logger.error("Error handling SystemMessage {0}".format(str(e)))
+            raise Exception()
 
     async def invoke_user_message(self, message: any) -> None:
+        if self._state == ContextState.Stopped:
+            self._logger.error("Actor already stopped, ignore user message {0}".format(str(message)))
+            return
+
         influence_timeout = True
-        if self.receive_timeout > timedelta(milliseconds=0):
-            influence_timeout = not isinstance(message, messages.NotInfluenceReceiveTimeout)
+        if self.receive_timeout > timedelta():
+            not_influence_timeout = isinstance(message, NotInfluenceReceiveTimeout)
+            influence_timeout = not not_influence_timeout
             if influence_timeout is True:
                 self.__stop_receive_timeout()
 
-        await self._process_message(message)
+        await self.__process_message(message)
 
-        if self.receive_timeout > timedelta(milliseconds=0) and influence_timeout is True:
-            self.reset_receive_timeout()
+        if self.receive_timeout > timedelta() and influence_timeout:
+            self.__reset_receive_timeout()
 
-    def escalate_failure(self, reason: Exception, obj: object) -> None:
-        if self.__restart_statistics is None:
-            self.__restart_statistics = RestartStatistics(0, None)
+    async def receive(self, envelope: MessageEnvelope):
+        self._message_or_envelope = envelope
+        return await self.__default_receive()
 
-        failure = Failure(self.my_self, reason, self.__restart_statistics)
-        self.my_self.send_system_message(SuspendMailbox())
-
-        if self.parent is None:
-            self.__handle_root_failure(failure)
-        else:
-            self.parent.send_system_message(failure)
-
-    async def __handle_stop(self):
-        if self.__state == ContextState.Stopping:
+    async def __default_receive(self):
+        if isinstance(self.message, PoisonPill):
+            await self.my_self.stop()
             return
 
-        self.__state = ContextState.Stopping
-        self.cancel_receive_timeout()
+        if self._props.context_decorator_chain is not None:
+            return await self.actor.receive(self._ensure_extras().context)
 
+        return await self.actor.receive(self)
+
+    async def __process_message(self, message: object) -> asyncio.futures:
+        if self._props.receive_middleware_chain is not None:
+            return await self._props.receive_middleware_chain(self._ensure_extras().context,
+                                                              MessageEnvelope.wrap(message))
+        if self._props.context_decorator_chain is not None:
+            return await self._ensure_extras().context.receive(MessageEnvelope.wrap(message))
+
+        self._message_or_envelope = message
+        return await self.__default_receive()
+
+    async def __send_user_message(self, target, message):
+        if self._props.sender_middleware_chain is not None:
+            await self._props.sender_middleware_chain(self._ensure_extras().context,
+                                                      target,
+                                                      MessageEnvelope.wrap(message))
+        else:
+            await target.send_user_message(message)
+
+    def __incarnate_actor(self):
+        self._state = ContextState.Alive
+        self._actor = self._props.producer()
+
+    async def __handle_restart(self):
+        self._state = ContextState.Restarting
+        self.cancel_receive_timeout()
+        await self.invoke_user_message(Restarting())
+        await self.__stop_all_children()
+
+    async def __handle_unwatch(self, message: Unwatch):
+        if self._extras is not None:
+            self._extras.unwatch(message.watcher)
+
+    async def __handle_watch(self, message: Watch):
+        if self._state == ContextState.Stopping:
+            await message.watcher.send_system_message(Terminated(who=self.my_self, address_terminated=False))
+        else:
+            self._ensure_extras().watch(message.watcher)
+
+    def __handle_failure(self, message: Failure):
+        if isinstance(self.actor, AbstractSupervisorStrategy):
+            self.actor.handle_failure(self, message.who, message.restart_statistics, message.reason)
+        else:
+            self._props.supervisor_strategy.handle_failure(self,
+                                                           message.who,
+                                                           message.restart_statistics,
+                                                           message.reason)
+
+    async def __handle_terminated(self, message: Terminated):
+        if self._extras is not None:
+            self._extras.remove_child(message.who)
+        await self.invoke_user_message(message)
+        if self._state == ContextState.Stopping or self._state == ContextState.Restarting:
+            await self.__try_restart_or_stop()
+
+    def __handle_root_failure(self, failure):
+        Supervision.default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)
+
+    async def __initiate_stop(self):
+        if self._state == ContextState.Stopping:
+            return
+
+        self._state = ContextState.Stopping
+        self.cancel_receive_timeout()
         await self.invoke_user_message(messages.Stopping())
         await self.__stop_all_children()
 
     async def __stop_all_children(self):
-        for child in self.children:
-            child.stop()
-        await self.__try_restart_or_stop()
-
-    async def __handle_terminated(self, message: Terminated):
-        if message.who in self.children:
-            self.children.remove(message.who)
-        await self.invoke_user_message(message)
-        await self.__try_restart_or_stop()
-
-    async def __handle_watch(self, message: Watch):
-        if self.__state == ContextState.Stopping:
-            message.watcher.send_system_message(Terminated(who=self.my_self, address_terminated=False))
-        else:
-            self.__watchers.append(message.watcher)
-
-    async def __handle_unwatch(self, message: Unwatch):
-        if self.__watchers is not None:
-            self.__watchers.remove(message.watcher)
-
-    async def __handle_failure(self, message: object):
-        # TODO: check if actor implements ISupervisorStrategy
-        self.__supervisor_strategy.handle_failure(self, message.who, message.restart_statistics, message.reason)
-
-    async def handle_restart(self):
-        self.__state = ContextState.Restarting
-        await self.invoke_user_message(Restarting())
-
-        process_registry = ProcessRegistry()
-        if self.children is not None:
-            for child in self.children:
-                process_registry.get(child).stop(child)
-
+        if self._extras is not None:
+            if self._extras.children is not None:
+                for child in self._extras.children:
+                    await child.stop()
         await self.__try_restart_or_stop()
 
     async def __try_restart_or_stop(self):
-        if len(self.children) > 0:
-            return
+        if self._extras is not None:
+            if self._extras.children is not None:
+                if len(self._extras.children) > 0:
+                    return
 
-        if self.__state == ContextState.Restarting:
+        if self._state == ContextState.Restarting:
             await self.__restart()
-        elif self.__state == ContextState.Stopping:
+        elif self._state == ContextState.Stopping:
             await self.__finalize_stop()
-
-    async def __restart(self):
-        self.__dispose_actor_if_disposable()
-        self._incarnate_actor()
-        self.my_self.send_system_message(ResumeMailbox())
-
-        await self.invoke_user_message(Started())
-
-        if self.__stash is not None:
-            while len(self.__stash) > 0:
-                msg = self.__stash.pop()
-                await self.invoke_user_message(msg)
 
     async def __finalize_stop(self):
         ProcessRegistry().remove(self.my_self)
@@ -507,87 +645,58 @@ class ActorContext(AbstractContext, AbstractInvoker, AbstractSupervisor, Abstrac
 
         self.__dispose_actor_if_disposable()
 
-        if self.__watchers is not None:
-            for watcher in self.__watchers:
-                watcher.send_system_message(Terminated(who=self.my_self))
-        elif self.parent is not None:
-            self.parent.send_system_message(Terminated(who=self.my_self))
+        if self._extras is not None:
+            for watcher in self._extras.watchers:
+                await watcher.send_system_message(Terminated(who=self.my_self))
 
-        self.__state = ContextState.Stopped
+        if self._parent is not None:
+            await self._parent.send_system_message(Terminated(who=self.my_self))
 
-    def __stop_receive_timeout(self):
-        self.__timer.cancel()
+        self._state = ContextState.Stopped
 
-    def reset_receive_timeout(self):
-        self.__timer.cancel()
-        self.__timer = threading.Timer(self.__timer.interval, self.__timer.function)
-        self.__timer.start()
+    async def __restart(self):
+        self.__dispose_actor_if_disposable()
+        self.__incarnate_actor()
+        self.my_self.send_system_message(ResumeMailbox())
 
-    def cancel_receive_timeout(self):
-        if self.__timer is None:
-            return
+        await self.invoke_user_message(Started())
 
-        self.__stop_receive_timeout()
-        self.__timer = None
-        self._receive_timeout = None
-
-    def reenter_after(self, target: Task, action: Callable):
-        msg = self._message
-
-        def act():
-            action()
-            return None
-
-        cont = Continuation(act, msg)
-
-        target.add_done_callback(lambda _: self.my_self.send_system_message(cont))
-
-    def _receive_timeout_callback(self):
-        if self.__timer is None:
-            return
-
-        self.cancel_receive_timeout()
-
-        pr = ProcessRegistry()
-        reff = pr.get(self.my_self)
-        message_env = MessageEnvelope(ReceiveTimeout(), None, None)
-        reff.send_user_message(self.my_self, message_env)
-
-    async def _process_message(self, message: object) -> None:
-        # TODO: port this method from .Net implementation.
-        self.__message_or_envelope = message
-
-        if self.__middleware is not None:
-            await self.__middleware(self)
-        elif isinstance(message, messages.PoisonPill) is True:
-            self.my_self.stop()
-        else:
-            await self.__receive(self)
-
-        self.__message_or_envelope = None
-
-    def __handle_root_failure(self, failure):
-        default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)
+        if self._extras.stash is not None:
+            while len(self._extras.stash) > 0:
+                msg = self._extras.stash.pop()
+                await self.invoke_user_message(msg)
 
     def __dispose_actor_if_disposable(self):
         atr = getattr(self._actor, "__exit__", None)
         if callable(atr):
             self._actor.__exit__()
 
-    def __default_receive(self, context):
-        # pr = ProcessRegistry()
-        if context.message is PoisonPill:
-            context.my_self.stop()
-            # pr.get(context.my_self).stop(context.my_self)
-            return None
+    def __reset_receive_timeout(self):
+        if self._extras is not None:
+            if self._extras.receive_timeout_timer is not None:
+                self._extras.reset_receive_timeout_timer()
 
-        return context.actor.receive(context)
+    def __stop_receive_timeout(self):
+        if self._extras is not None:
+            if self._extras.receive_timeout_timer is not None:
+                self._extras.stop_receive_timeout_timer()
 
+    def __receive_timeout_callback(self):
+        if self._extras is None or self._extras.receive_timeout_timer is None:
+            return
 
-class Actor():
-    @abstractmethod
-    async def receive(self, context: AbstractContext) -> None:
-        pass
+        self.cancel_receive_timeout()
+        self.send(self.my_self, ReceiveTimeout())
+
+    def _ensure_extras(self) -> ActorContextExtras:
+        if self._extras is None:
+            if self._props is not None:
+                context = self._props.context_decorator_chain(self)
+            else:
+                context = self
+            self._extras = ActorContextExtras(context)
+
+        return self._extras
 
 
 class EmptyActor(Actor):
@@ -599,10 +708,9 @@ class EmptyActor(Actor):
 
 
 class GlobalRootContext(metaclass=singleton):
-
     def __init__(self):
         self.__instance = RootContext()
 
     @property
-    def instance(self):
+    def instance(self) -> RootContext:
         return self.__instance

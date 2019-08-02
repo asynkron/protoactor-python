@@ -85,6 +85,14 @@ class Continuation(SystemMessage):
         self.message = message
 
 
+class SuspendMailbox(SystemMessage):
+    pass
+
+
+class ResumeMailbox(SystemMessage):
+    pass
+
+
 class DeadLetterEvent:
     def __init__(self, pid: 'PID', message: object, sender: Optional['PID']) -> None:
         self.__pid = pid
