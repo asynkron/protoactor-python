@@ -24,7 +24,7 @@ class RemoteManager():
         return self.__nodes
 
     def provision_node(self, host='127.0.0.1', port=12000):
-        node_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'node\\node.py')
+        node_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'node/node.py')
         process = subprocess.Popen(['python', str(node_path), '--host', str(host), '--port', str(port)],
                                    stdout=subprocess.PIPE,
                                    stdin=subprocess.PIPE)
