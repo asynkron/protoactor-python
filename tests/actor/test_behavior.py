@@ -25,26 +25,26 @@ class LightBulb(Actor):
 
     async def off(self, context):
         if isinstance(context.message, PressSwitch):
-            context.respond("Turning on")
+            await context.respond("Turning on")
             self._behavior.become(self.on)
         elif isinstance(context.message, Touch):
-            context.respond("Cold")
+            await context.respond("Cold")
 
     async def on(self, context):
         if isinstance(context.message, PressSwitch):
-            context.respond("Turning off")
+            await context.respond("Turning off")
             self._behavior.become(self.off)
         elif isinstance(context.message, Touch):
-            context.respond("Hot!")
+            await context.respond("Hot!")
 
     async def receive(self, context):
         if isinstance(context.message, HitWithHammer):
-            context.respond("Smashed!")
+            await context.respond("Smashed!")
             self._smashed = True
         elif isinstance(context.message, PressSwitch) and self._smashed:
-            context.respond("Broken")
+            await context.respond("Broken")
         elif isinstance(context.message, Touch) and self._smashed:
-            context.respond("OW!")
+            await context.respond("OW!")
 
         await self._behavior.receive_async(context)
 
@@ -54,14 +54,10 @@ async def test_can_change_states():
     test_actor_props = Props.from_producer(LightBulb)
     context = RootContext()
     actor = context.spawn(test_actor_props)
-    response = await context.request_async(actor, PressSwitch())
-    assert response == "Turning on"
-    response = await context.request_async(actor, Touch())
-    assert response == "Hot!"
-    response = await context.request_async(actor, PressSwitch())
-    assert response == "Turning off"
-    response = await context.request_async(actor, Touch())
-    assert response == "Cold"
+    assert await context.request_async(actor, PressSwitch()) == "Turning on"
+    assert await context.request_async(actor, Touch())== "Hot!"
+    assert await context.request_async(actor, PressSwitch()) == "Turning off"
+    assert await context.request_async(actor, Touch()) == "Cold"
 
 
 @pytest.mark.asyncio
@@ -70,12 +66,9 @@ async def test_can_use_global_behaviour():
     test_actor_props = Props.from_producer(LightBulb)
     actor = context.spawn(test_actor_props)
     _ = await context.request_async(actor, PressSwitch())
-    response = await context.request_async(actor, HitWithHammer())
-    assert response == "Smashed!"
-    response = await context.request_async(actor, PressSwitch())
-    assert response == "Broken"
-    response = await context.request_async(actor, Touch())
-    assert response == "OW!"
+    assert await context.request_async(actor, HitWithHammer()) == "Smashed!"
+    assert await context.request_async(actor, PressSwitch()) == "Broken"
+    assert await context.request_async(actor, Touch()) == "OW!"
 
 
 @pytest.mark.asyncio
@@ -85,11 +78,11 @@ async def test_pop_behavior_should_restore_pushed_behavior():
     async def func_1(ctx):
         if isinstance(ctx.message, str):
             async def func_2(ctx2):
-                ctx2.respond(42)
+                await ctx2.respond(42)
                 behavior.unbecome_stacked()
 
             behavior.become_stacked(func_2)
-            ctx.respond(ctx.message)
+            await ctx.respond(ctx.message)
 
     behavior.become(func_1)
 

@@ -5,8 +5,8 @@
 # from protoactor.remote.serialization import Serialization
 #
 # from tests.remote.messages.protos_pb2 import DESCRIPTOR
-
-
+#
+#
 # @pytest.fixture(scope="session", autouse=True)
 # def register_file_descriptor():
 #     Serialization().register_file_descriptor(DESCRIPTOR)

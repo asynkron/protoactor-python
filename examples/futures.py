@@ -1,6 +1,7 @@
 import asyncio
 
-from protoactor.actor import RootContext, Props
+from protoactor.actor.props import Props
+from protoactor.actor.actor import RootContext
 
 
 class HelloMessage:
@@ -11,7 +12,7 @@ class HelloMessage:
 async def hello_function(context):
     message = context.message
     if isinstance(message, HelloMessage):
-        context.respond("hey")
+        await context.respond("hey")
 
 
 async def main():

@@ -1,3 +1,5 @@
+import asyncio
+
 from protoactor.actor.props import Props
 from protoactor.actor.actor import Actor, AbstractContext, RootContext
 
@@ -14,8 +16,15 @@ class HelloActor(Actor):
             print(message.text)
 
 
-if __name__ == "__main__":
+async def main():
     context = RootContext()
     props = Props.from_producer(HelloActor)
     pid = context.spawn(props)
-    pid.tell(HelloMessage('Hello World!'))
+
+    await context.send(pid, HelloMessage('Hello World!'))
+    input()
+
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

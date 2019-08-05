@@ -33,8 +33,8 @@ class Subscription():
 
 class EventStream():
     def __init__(self):
-        self.__subscriptions = {}
-        self.__logger = get_logger('EventStream')
+        self._subscriptions = {}
+        self._logger = get_logger('EventStream')
         self.subscribe(self.__report_deadletters, DeadLetterEvent)
 
     def subscribe(self, fun: Callable[..., Any], msg_type: type = None,
@@ -46,20 +46,20 @@ class EventStream():
                 await fun(msg)
 
         sub = Subscription(self, action, dispatcher)
-        self.__subscriptions[sub.id] = sub
+        self._subscriptions[sub.id] = sub
         return sub
 
     def publish(self, message: object) -> None:
-        for sub in self.__subscriptions.values():
+        for sub in self._subscriptions.values():
             async def action():
                 try:
                     await sub.action(message)
                 except Exception:
-                    self.__logger.log_warning('Exception has occurred when publishing a message.')
+                    self._logger.log_warning('Exception has occurred when publishing a message.')
             sub.dispatcher.schedule(action)
 
     def unsubscribe(self, uniq_id):
-        del self.__subscriptions[uniq_id]
+        del self._subscriptions[uniq_id]
 
     async def __report_deadletters(self, message: DeadLetterEvent) -> None:
         console_message = """[DeadLetterEvent] %(pid)s got %(message_type)s:%(message)s from
@@ -68,7 +68,7 @@ class EventStream():
                          "message": message.message,
                          "sender": message.sender
                          }
-        self.__logger.info(console_message)
+        self._logger.info(console_message)
 
 
 class GlobalEventStream(metaclass=singleton):

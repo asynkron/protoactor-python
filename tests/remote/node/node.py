@@ -1,17 +1,19 @@
 import asyncio
 import getopt
-import multiprocessing
+import os
+import re
 import sys
-from time import sleep
 
-from protoactor.actor.actor import Actor, RootContext
-from protoactor.actor.messages import Started
+path = os.path.dirname(os.path.abspath(__file__))
+match = re.search('protoactor-python', path)
+new_path = path[:match.end()]
+sys.path.insert(0, new_path)
+
 from protoactor.actor.props import Props
 from protoactor.remote.remote import Remote
 from protoactor.remote.serialization import Serialization
-from tests.remote.messages.protos_pb2 import Ping, Pong
-from tests.remote.messages.protos_pb2 import DESCRIPTOR
-
+from tests.remote.messages.protos_pb2 import Ping, Pong, DESCRIPTOR
+from protoactor.actor.actor import Actor, RootContext
 
 class EchoActor(Actor):
     def __init__(self, host, port):
@@ -20,7 +22,8 @@ class EchoActor(Actor):
 
     async def receive(self, context):
         if isinstance(context.message, Ping):
-            context.respond(Pong(message="%s:%s %s" % (self._host, self._port, context.message.message)))
+            await context.respond(Pong(message="%s:%s %s" % (self._host, self._port, context.message.message)))
+
 
 async def start(argv):
     host = None

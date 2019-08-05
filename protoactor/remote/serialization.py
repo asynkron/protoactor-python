@@ -89,7 +89,8 @@ class Serialization(metaclass=singleton):
     def register_file_descriptor(self, descriptor):
         for message_name, message_type in descriptor.message_types_by_name.items():
             name = descriptor.package + '.' + message_name
-            self.type_lookup[name] = message_type
+            if name not in self.type_lookup:
+                self.type_lookup[name] = message_type
 
     def serialize(self, message, serializer_id):
         return self.__serializers[serializer_id].serialize(message)

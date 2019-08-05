@@ -8,11 +8,11 @@ from protoactor.actor.utils import singleton
 
 class AbstractMessageInvoker(metaclass=ABCMeta):
     @abstractmethod
-    async def invoke_system_message(self, msg: object):
+    def invoke_system_message(self, msg: object):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def invoke_user_message(self, msg: object):
+    def invoke_user_message(self, msg: object):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -76,10 +76,15 @@ class SynchronousDispatcher(AbstractDispatcher):
     def schedule(self, runner: Callable[..., asyncio.coroutine], **kwargs: ...):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        threading.Thread(target=loop.run_forever, daemon=True).start()
-        future = asyncio.run_coroutine_threadsafe(runner(), loop)
+
+        thread = threading.Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        future = asyncio.run_coroutine_threadsafe(runner(**kwargs), loop)
         future.result()
 
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join()
 
 class GlobalSynchronousDispatcher(metaclass=singleton):
     def __init__(self, async_loop=None):

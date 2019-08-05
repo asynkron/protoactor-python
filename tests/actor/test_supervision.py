@@ -6,16 +6,14 @@ from unittest.mock import Mock
 import pytest
 
 from protoactor.mailbox.mailbox import DefaultMailbox
-from protoactor.mailbox.messages import ResumeMailbox
-from protoactor.actor.messages import Restart
 from protoactor.actor.protos_pb2 import PID
-from protoactor.actor.process import LocalProcess
+from protoactor.actor.process import ActorProcess
 from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.supervision import OneForOneStrategy, AllForOneStrategy, SupervisorDirective, AbstractSupervisor
 from typing import List
 
 
-class TestSupervisor(AbstractSupervisor):
+class MockSupervisor(AbstractSupervisor):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,9 +36,9 @@ class TestSupervisor(AbstractSupervisor):
 
 @pytest.fixture(scope='function', )
 def supervisor_data():
-    supervisor = TestSupervisor()
+    supervisor = MockSupervisor()
     mailbox = DefaultMailbox(None, None, None)
-    local_process = LocalProcess(mailbox)
+    local_process = ActorProcess(mailbox)
     pid_child = PID()
     pid_child.address = 'address'
     pid_child.id = 'id'

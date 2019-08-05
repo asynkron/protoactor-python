@@ -2,9 +2,10 @@ from unittest import mock
 
 import pytest
 
-from protoactor.actor.process import DeadLettersProcess, ProcessRegistry
+from protoactor.actor.process import DeadLettersProcess, ProcessRegistry, ActorProcess
 from protoactor.actor.utils import singleton
 from protoactor.actor.protos_pb2 import PID
+from protoactor.mailbox.mailbox import DefaultMailbox
 
 
 @pytest.fixture
@@ -58,7 +59,7 @@ def test_get_nonhost(nohost: ProcessRegistry, mock_process):
 
 # def test_get_sameaddress():
 #     test_pid = PID(address='address', id='id')
-#     lp  = LocalProcess(DefaultMailbox())
+#     lp  = ActorProcess(DefaultMailbox())
 #
 #     pr = ProcessRegistry(lambda x: lp if x == test_pid else None)
 #     pr.address = 'address'
@@ -70,7 +71,7 @@ def test_get_nonhost(nohost: ProcessRegistry, mock_process):
 #
 # def test_get_not_sameaddress():
 #     test_pid = PID(address='another_address', id='id')
-#     lp  = LocalProcess(DefaultMailbox())
+#     lp  = ActorProcess(DefaultMailbox())
 #
 #     pr = ProcessRegistry(lambda x: lp if x == test_pid else None)
 #     pr.address = 'address'
@@ -81,7 +82,7 @@ def test_get_nonhost(nohost: ProcessRegistry, mock_process):
 #
 # def test_get__local_actor_refs_not_has_id_DeadLettersProcess():
 #     test_pid = PID(address='address', id='id')
-#     lp = LocalProcess(DefaultMailbox())
+#     lp = ActorProcess(DefaultMailbox())
 #
 #     pr = ProcessRegistry(lambda x: None)
 #     pr.address = 'address'
