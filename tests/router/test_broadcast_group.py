@@ -30,7 +30,7 @@ async def test_broadcast_group_router_all_routees_receive_messages():
 async def test_broadcast_group_router_when_one_routee_is_stopped_all_other_routees_receive_messages():
     router, routee1, routee2, routee3 = create_broadcast_group_router_with3_routees()
 
-    routee2.stop()
+    await routee2.stop()
     await context.send(router, 'hello')
 
     assert await context.request_async(routee1, 'received?', timeout) == 'hello'

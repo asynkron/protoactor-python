@@ -13,7 +13,7 @@ from protoactor.actor.supervision import OneForOneStrategy, AllForOneStrategy, S
 from typing import List
 
 
-class TestSupervisor(AbstractSupervisor):
+class MockSupervisor(AbstractSupervisor):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,7 +36,7 @@ class TestSupervisor(AbstractSupervisor):
 
 @pytest.fixture(scope='function', )
 def supervisor_data():
-    supervisor = TestSupervisor()
+    supervisor = MockSupervisor()
     mailbox = DefaultMailbox(None, None, None)
     local_process = ActorProcess(mailbox)
     pid_child = PID()

@@ -1,2 +1,2 @@
-protobuf==3.6.1
-grpclib==0.2.1
+protobuf
+grpclib
