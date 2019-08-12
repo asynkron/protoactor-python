@@ -7,7 +7,7 @@ from protoactor.actor.props import Props
 from protoactor.actor.actor import Actor, AbstractContext, RootContext
 from protoactor.router.messages import AddRoutee, RemoveRoutee, GetRoutees, BroadcastMessage
 from protoactor.router.router import Router
-from tests.test_fixtures.test_mailbox import MockMailbox
+from tests.test_fixtures.mock_mailbox import MockMailbox
 
 context = RootContext()
 timeout = timedelta(milliseconds=1000)
