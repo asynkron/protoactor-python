@@ -51,7 +51,7 @@ class Props:
                  mailbox_producer: Callable[[], mailbox.AbstractMailbox] =
                  MailboxFactory.create_unbounded_mailbox,
                  guardian_strategy: AbstractSupervisorStrategy = None,
-                 supervisor_strategy: AbstractSupervisorStrategy = Supervision().default_strategy,
+                 supervisor_strategy: AbstractSupervisorStrategy = Supervision.default_strategy,
                  dispatcher: AbstractDispatcher = Dispatchers().default_dispatcher,
                  receive_middleware: List[Callable[[AbstractContext], Task]] = [],
                  sender_middleware: List[Callable[[AbstractContext], Task]] = [],

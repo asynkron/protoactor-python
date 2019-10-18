@@ -6,7 +6,7 @@ from multiprocessing import RLock
 from typing import Callable
 
 
-class singleton(type):
+class Singleton(type):
     _instances = {}
     _singleton_lock = RLock()
 
@@ -14,12 +14,12 @@ class singleton(type):
         if cls not in cls._instances:
             with cls._singleton_lock:
                 if cls not in cls._instances:
-                    cls._instances[cls] = super(singleton, cls).__call__(*args, **kwargs)
+                    cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
     def clear(cls):
         try:
-            del singleton._instances[cls]
+            del Singleton._instances[cls]
         except KeyError:
             pass
 

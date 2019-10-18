@@ -3,7 +3,7 @@ import threading
 from typing import Callable
 from threading import Thread
 from abc import ABCMeta, abstractmethod
-from protoactor.actor.utils import singleton
+from protoactor.actor.utils import Singleton
 
 
 class AbstractMessageInvoker(metaclass=ABCMeta):
@@ -31,7 +31,7 @@ class AbstractDispatcher(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
 
-class Dispatchers(metaclass=singleton):
+class Dispatchers(metaclass=Singleton):
     @property
     def default_dispatcher(self) -> AbstractDispatcher:
         return ThreadDispatcher()
@@ -85,18 +85,3 @@ class SynchronousDispatcher(AbstractDispatcher):
 
         loop.call_soon_threadsafe(loop.stop)
         thread.join()
-
-class GlobalSynchronousDispatcher(metaclass=singleton):
-    def __init__(self, async_loop=None):
-        self.async_loop = async_loop
-
-    @property
-    def throughput(self) -> int:
-        return 300
-
-    def schedule(self, runner: Callable[..., asyncio.Task]):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        threading.Thread(target=loop.run_forever, daemon=True).start()
-        future = asyncio.run_coroutine_threadsafe(runner(), loop)
-        return future.result()

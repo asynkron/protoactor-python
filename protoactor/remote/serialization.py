@@ -4,7 +4,7 @@ from google.protobuf import json_format
 from google.protobuf.message import Message
 
 from protoactor.actor.protos_pb2 import DESCRIPTOR as protos_descriptor
-from protoactor.actor.utils import singleton
+from protoactor.actor.utils import Singleton
 from protoactor.remote.messages import JsonMessage
 from protoactor.remote.protos_remote_pb2 import DESCRIPTOR as protos_remote_descriptor
 
@@ -61,7 +61,7 @@ class JsonSerializer(AbstractSerializer):
         return obj.DESCRIPTOR.full_name
 
 
-class Serialization(metaclass=singleton):
+class Serialization(metaclass=Singleton):
     def __init__(self):
         self.type_lookup = {}
         self.__serializers = []

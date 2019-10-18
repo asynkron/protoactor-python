@@ -10,7 +10,7 @@ from protoactor.actor.message_envelope import MessageEnvelope
 from protoactor.actor.messages import DeadLetterEvent, Failure, Restart, ResumeMailbox
 from protoactor.actor.protos_pb2 import PID, Stop
 from protoactor.actor.supervision import AbstractSupervisorStrategy, AbstractSupervisor
-from protoactor.actor.utils import singleton
+from protoactor.actor.utils import Singleton
 
 is_import = False
 if is_import:
@@ -97,12 +97,12 @@ class FutureProcess(AbstractProcess):
         self._future.set_result(msg)
 
 
-class DeadLettersProcess(AbstractProcess, metaclass=singleton):
+class DeadLettersProcess(AbstractProcess, metaclass=Singleton):
     async def send_system_message(self, pid: 'PID', message: object):
-        GlobalEventStream().instance.publish(DeadLetterEvent(pid, message, None))
+        await GlobalEventStream.publish(DeadLetterEvent(pid, message, None))
 
     async def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
-        GlobalEventStream().instance.publish(DeadLetterEvent(pid, message, sender))
+        await GlobalEventStream.publish(DeadLetterEvent(pid, message, sender))
 
 
 class GuardianProcess(AbstractProcess, AbstractSupervisor):
@@ -139,7 +139,7 @@ class GuardianProcess(AbstractProcess, AbstractSupervisor):
         raise TypeError('Guardian does not hold its children PIDs.')
 
 
-class ProcessRegistry(metaclass=singleton):
+class ProcessRegistry(metaclass=Singleton):
     def __init__(self) -> None:
         self._hostResolvers = []
         # python dict structure is atomic for primitive actions. Need to be checked
@@ -191,7 +191,7 @@ class ProcessRegistry(metaclass=singleton):
         return str(self._sequence_id)
 
 
-class Guardians(metaclass=singleton):
+class Guardians(metaclass=Singleton):
     def __init__(self):
         self.__guardian_strategies = {}
 

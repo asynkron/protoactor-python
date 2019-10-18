@@ -20,7 +20,7 @@ async def main():
     props = Props.from_func(hello_function)
     pid = context.spawn(props)
 
-    reply = await context.request_async(pid, HelloMessage('Hello'))
+    reply = await context.request_future(pid, HelloMessage('Hello'))
     print(reply)
 
 

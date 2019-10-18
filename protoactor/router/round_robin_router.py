@@ -40,4 +40,4 @@ class RoundRobinState(RouterState):
         self._current_index += 1
         pid = self._routees[i]
 
-        await GlobalRootContext().instance.send(pid, message)
+        await GlobalRootContext.send(pid, message)

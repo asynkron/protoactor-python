@@ -42,4 +42,4 @@ class RandomRouterState(RouterState):
     async def route_message(self, message: Any) -> None:
         i = random.randint(0, len(self._routees) - 1)
         pid = self._routees[i]
-        await GlobalRootContext().instance.send(pid, message)
+        await GlobalRootContext.send(pid, message)

@@ -3,7 +3,7 @@
 
 import pytest
 
-from protoactor.actor.utils import singleton, Stack
+from protoactor.actor.utils import Singleton, Stack
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def stack():
 
 
 def test_singleton():
-    class TestSingleton(metaclass=singleton):
+    class TestSingleton(metaclass=Singleton):
         def __init__(self):
             self.test = ""
 
@@ -23,11 +23,11 @@ def test_singleton():
 
 
 def test_singleton_for_different_classes():
-    class A(metaclass=singleton):
+    class A(metaclass=Singleton):
         def __init__(self):
             self.a = ""
 
-    class B(metaclass=singleton):
+    class B(metaclass=Singleton):
         def __init__(self):
             self.b = ""
 

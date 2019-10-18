@@ -21,9 +21,9 @@ async def test_broadcast_group_router_all_routees_receive_messages():
 
     await context.send(router, 'hello')
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee2, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee3, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee1, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee2, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee3, 'received?', timeout) == 'hello'
 
 
 @pytest.mark.asyncio
@@ -33,8 +33,8 @@ async def test_broadcast_group_router_when_one_routee_is_stopped_all_other_route
     await routee2.stop()
     await context.send(router, 'hello')
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee3, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee1, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee3, 'received?', timeout) == 'hello'
 
 
 @pytest.mark.asyncio
@@ -44,8 +44,8 @@ async def test_broadcast_group_router_when_one_routee_is_slow_all_other_routees_
     await context.send(routee2, 'go slow')
     await context.send(router, 'hello')
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee3, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee1, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee3, 'received?', timeout) == 'hello'
 
 
 @pytest.mark.asyncio
@@ -54,7 +54,7 @@ async def test_broadcast_group_router_routees_can_be_removed():
 
     await context.send(router, RemoveRoutee(routee1))
 
-    routees = await context.request_async(router, GetRoutees(), timeout)
+    routees = await context.request_future(router, GetRoutees(), timeout)
     assert routee1 not in routees.pids
     assert routee2 in routees.pids
     assert routee3 in routees.pids
@@ -67,7 +67,7 @@ async def test_broadcast_group_router_routees_can_be_added():
 
     await context.send(router, AddRoutee(routee4))
 
-    routees = await context.request_async(router, GetRoutees(), timeout)
+    routees = await context.request_future(router, GetRoutees(), timeout)
     assert routee1 in routees.pids
     assert routee2 in routees.pids
     assert routee3 in routees.pids
@@ -82,9 +82,9 @@ async def test_broadcast_group_router_removed_routees_no_longer_receive_messages
     await context.send(router, RemoveRoutee(routee1))
     await context.send(router, 'second message')
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'first message'
-    assert await context.request_async(routee2, 'received?', timeout) == 'second message'
-    assert await context.request_async(routee3, 'received?', timeout) == 'second message'
+    assert await context.request_future(routee1, 'received?', timeout) == 'first message'
+    assert await context.request_future(routee2, 'received?', timeout) == 'second message'
+    assert await context.request_future(routee3, 'received?', timeout) == 'second message'
 
 
 @pytest.mark.asyncio
@@ -95,10 +95,10 @@ async def test_broadcast_group_router_added_routees_receive_messages():
     await context.send(router, AddRoutee(routee4))
     await context.send(router, 'a message')
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'a message'
-    assert await context.request_async(routee2, 'received?', timeout) == 'a message'
-    assert await context.request_async(routee3, 'received?', timeout) == 'a message'
-    assert await context.request_async(routee4, 'received?', timeout) == 'a message'
+    assert await context.request_future(routee1, 'received?', timeout) == 'a message'
+    assert await context.request_future(routee2, 'received?', timeout) == 'a message'
+    assert await context.request_future(routee3, 'received?', timeout) == 'a message'
+    assert await context.request_future(routee4, 'received?', timeout) == 'a message'
 
 @pytest.mark.asyncio
 async def test_broadcast_group_router_all_routees_receive_router_broadcast_messages():
@@ -106,9 +106,9 @@ async def test_broadcast_group_router_all_routees_receive_router_broadcast_messa
 
     await context.send(router, BroadcastMessage('hello'))
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee2, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee3, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee1, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee2, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee3, 'received?', timeout) == 'hello'
 
 
 def create_broadcast_group_router_with3_routees():

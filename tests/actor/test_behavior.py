@@ -54,10 +54,10 @@ async def test_can_change_states():
     test_actor_props = Props.from_producer(LightBulb)
     context = RootContext()
     actor = context.spawn(test_actor_props)
-    assert await context.request_async(actor, PressSwitch()) == "Turning on"
-    assert await context.request_async(actor, Touch())== "Hot!"
-    assert await context.request_async(actor, PressSwitch()) == "Turning off"
-    assert await context.request_async(actor, Touch()) == "Cold"
+    assert await context.request_future(actor, PressSwitch()) == "Turning on"
+    assert await context.request_future(actor, Touch()) == "Hot!"
+    assert await context.request_future(actor, PressSwitch()) == "Turning off"
+    assert await context.request_future(actor, Touch()) == "Cold"
 
 
 @pytest.mark.asyncio
@@ -65,10 +65,10 @@ async def test_can_use_global_behaviour():
     context = RootContext()
     test_actor_props = Props.from_producer(LightBulb)
     actor = context.spawn(test_actor_props)
-    _ = await context.request_async(actor, PressSwitch())
-    assert await context.request_async(actor, HitWithHammer()) == "Smashed!"
-    assert await context.request_async(actor, PressSwitch()) == "Broken"
-    assert await context.request_async(actor, Touch()) == "OW!"
+    _ = await context.request_future(actor, PressSwitch())
+    assert await context.request_future(actor, HitWithHammer()) == "Smashed!"
+    assert await context.request_future(actor, PressSwitch()) == "Broken"
+    assert await context.request_future(actor, Touch()) == "OW!"
 
 
 @pytest.mark.asyncio
@@ -90,8 +90,8 @@ async def test_pop_behavior_should_restore_pushed_behavior():
     context = RootContext()
     pid = context.spawn(props)
 
-    reply = await context.request_async(pid, "number")
-    reply_after_push = await context.request_async(pid, None)
-    reply_after_pop = await context.request_async(pid, "answertolifetheuniverseandeverything")
+    reply = await context.request_future(pid, "number")
+    reply_after_push = await context.request_future(pid, None)
+    reply_after_pop = await context.request_future(pid, "answertolifetheuniverseandeverything")
 
     assert reply + str(reply_after_push) + reply_after_pop == "number42answertolifetheuniverseandeverything"

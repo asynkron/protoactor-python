@@ -3,15 +3,15 @@ from unittest import mock
 import pytest
 
 from protoactor.actor.process import DeadLettersProcess, ProcessRegistry, ActorProcess
-from protoactor.actor.utils import singleton
+from protoactor.actor.utils import Singleton
 from protoactor.actor.protos_pb2 import PID
 from protoactor.mailbox.mailbox import DefaultMailbox
 
 
 @pytest.fixture
 def nohost():
-    if ProcessRegistry in singleton._instances:
-        del singleton._instances[ProcessRegistry]
+    if ProcessRegistry in Singleton._instances:
+        del Singleton._instances[ProcessRegistry]
     return ProcessRegistry()
 
 

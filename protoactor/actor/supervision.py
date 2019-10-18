@@ -3,7 +3,6 @@ from enum import Enum
 from typing import List
 
 from protoactor.actor.protos_pb2 import PID
-from protoactor.actor.utils import singleton
 from .log import get_logger
 from .restart_statistics import RestartStatistics
 
@@ -146,7 +145,17 @@ class AlwaysRestartStrategy(AbstractSupervisorStrategy):
         supervisor.restart_children(reason, child)
 
 
-class Supervision(metaclass=singleton):
+# class Supervision(metaclass=Singleton):
+#     @property
+#     def default_strategy(self) -> AbstractSupervisorStrategy:
+#         return OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, 10)
+#
+#     @property
+#     def always_restart_strategy(self) -> AlwaysRestartStrategy:
+#         return AlwaysRestartStrategy()
+
+
+class Supervision():
     @property
     def default_strategy(self) -> AbstractSupervisorStrategy:
         return OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, 10)
@@ -154,3 +163,6 @@ class Supervision(metaclass=singleton):
     @property
     def always_restart_strategy(self) -> AlwaysRestartStrategy:
         return AlwaysRestartStrategy()
+
+
+Supervision = Supervision()

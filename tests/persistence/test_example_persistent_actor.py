@@ -235,11 +235,12 @@ async def test_index_increments_on_events_saved():
     threading_events['process_multiply'].wait()
     threading_events['process_multiply'].clear()
 
-    index = await root_context.request_async(pid, GetIndex(), timedelta(seconds=1))
+    index = await root_context.request_future(pid, GetIndex(), timedelta(seconds=1))
     assert index == 0
 
     await root_context.send(pid, Multiply(4))
-    index = await root_context.request_async(pid, GetIndex(), timedelta(seconds=1))
+    index = await root_context.request_future(pid, GetIndex(), timedelta(seconds=1))
+
     assert index == 1
 
 
@@ -259,7 +260,7 @@ async def test_index_is_not_affected_by_taking_a_snapshot():
     threading_events['process_multiply'].wait()
     threading_events['process_multiply'].clear()
 
-    index = await root_context.request_async(pid, GetIndex(), timedelta(seconds=1))
+    index = await root_context.request_future(pid, GetIndex(), timedelta(seconds=1))
     assert index == 1
 
 
@@ -277,8 +278,9 @@ async def test_index_is_correct_after_recovery():
 
     await pid.stop()
     pid = root_context.spawn(props)
-    state = await root_context.request_async(pid, GetState(), timedelta(seconds=1))
-    index = await root_context.request_async(pid, GetIndex(), timedelta(seconds=1))
+    
+    state = await root_context.request_future(pid, GetState(), timedelta(seconds=1))
+    index = await root_context.request_future(pid, GetIndex(), timedelta(seconds=1))
 
     assert index == 1
     assert state == initial_state * 2 * 4
@@ -427,4 +429,6 @@ def create_test_actor():
 async def restart_actor_and_get_state(pid, props):
     await pid.stop()
     pid = root_context.spawn(props)
-    return await root_context.request_async(pid, GetState(), timedelta(seconds=1))
+    
+    return await root_context.request_future(pid, GetState(), timedelta(seconds=1))
+
