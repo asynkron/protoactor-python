@@ -1,6 +1,6 @@
 import asyncio
 from abc import abstractmethod, ABCMeta
-from asyncio import Task
+from asyncio import Task, Future
 from datetime import timedelta
 from enum import Enum
 from functools import reduce
@@ -13,18 +13,16 @@ from protoactor.actor.cancel_token import CancelToken
 from protoactor.actor.log import get_logger
 from protoactor.actor.message_envelope import MessageEnvelope
 from protoactor.actor.message_header import MessageHeader
-
-from protoactor.actor.process import Guardians, FutureProcess, ProcessRegistry
-from protoactor.actor.protos_pb2 import Terminated, Watch, Unwatch, Stop, PID
-from protoactor.actor.restart_statistics import RestartStatistics
-from protoactor.actor.utils import singleton
-from protoactor.mailbox.dispatcher import AbstractMessageInvoker, Dispatchers
-from protoactor.actor.supervision import AbstractSupervisor, Supervision, \
-    AbstractSupervisorStrategy
 from protoactor.actor.messages import Restarting, Started, Stopped, \
     Continuation, ReceiveTimeout, PoisonPill, Failure, Restart, \
     SystemMessage, NotInfluenceReceiveTimeout, ResumeMailbox, \
     SuspendMailbox
+from protoactor.actor.process import Guardians, FutureProcess, ProcessRegistry
+from protoactor.actor.protos_pb2 import Terminated, Watch, Unwatch, Stop, PID
+from protoactor.actor.restart_statistics import RestartStatistics
+from protoactor.actor.supervision import AbstractSupervisor, Supervision, \
+    AbstractSupervisorStrategy
+from protoactor.mailbox.dispatcher import AbstractMessageInvoker
 
 is_import = False
 if is_import:
@@ -61,10 +59,10 @@ class AbstractSenderContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def request_async(self, target: PID,
-                            message: object,
-                            timeout: timedelta = None,
-                            cancellation_token: CancelToken = None) -> asyncio.Future:
+    async def request_future(self, target: PID,
+                             message: object,
+                             timeout: timedelta = None,
+                             cancellation_token: CancelToken = None) -> asyncio.Future:
         raise NotImplementedError("Should Implement this method")
 
 
@@ -226,8 +224,8 @@ class RootContext(AbstractRootContext):
         else:
             await self.send(target, MessageEnvelope(message, sender, None))
 
-    async def request_async(self, target: PID, message: object, timeout: timedelta = None,
-                            cancellation_token: CancelToken = None) -> asyncio.Future:
+    async def request_future(self, target: PID, message: object, timeout: timedelta = None,
+                             cancellation_token: CancelToken = None) -> asyncio.Future:
         if timeout is None and cancellation_token is None:
             future = FutureProcess()
             message_envelope = MessageEnvelope(message, future.pid, None)
@@ -435,22 +433,31 @@ class ActorContext(AbstractContext, AbstractSupervisor, AbstractMessageInvoker):
 
     def reenter_after(self, target: Callable[[], Awaitable[Any]], action: Callable[[Any], None]) -> None:
         async def run(msg):
-            result = await target()
-            if len(list(signature(action).parameters)) > 0:
-                async def fn1():
-                    return await action(result)
-
-                await self.my_self.send_system_message(Continuation(fn1, msg))
+            if isinstance(target, Future):
+                # await target
+                await asyncio.wait([target])
+                result = target
             else:
-                async def fn2():
+                loop = asyncio.get_event_loop()
+                future = loop.create_future()
+                try:
+                    future.set_result(await target())
+                except Exception as ex:
+                    future.set_exception(ex)
+                result = future
+            if len(list(signature(action).parameters)) == 0:
+                async def fn():
                     return await action()
+                await self.my_self.send_system_message(Continuation(fn, msg))
+            else:
+                async def fn():
+                    return await action(result)
+                await self.my_self.send_system_message(Continuation(fn, msg))
 
-                await self.my_self.send_system_message(Continuation(fn2, msg))
+        asyncio.ensure_future(run(self._message_or_envelope))
 
-        Dispatchers().default_dispatcher.schedule(run, msg=self._message_or_envelope)
-
-    async def request_async(self, target: PID, message: object, timeout: timedelta = None,
-                            cancellation_token: CancelToken = None) -> asyncio.Future:
+    async def request_future(self, target: PID, message: object, timeout: timedelta = None,
+                             cancellation_token: CancelToken = None) -> asyncio.Future:
         if timeout is None and cancellation_token is None:
             future = FutureProcess()
             message_envelope = MessageEnvelope(message, future.pid, None)
@@ -478,7 +485,7 @@ class ActorContext(AbstractContext, AbstractSupervisor, AbstractMessageInvoker):
         failure = Failure(self.my_self, reason, self._ensure_extras().restart_statistics)
         await self.my_self.send_system_message(SuspendMailbox())
         if self.parent is None:
-            self.__handle_root_failure(failure)
+            await self.__handle_root_failure(failure)
         else:
             await self.parent.send_system_message(failure)
 
@@ -593,11 +600,11 @@ class ActorContext(AbstractContext, AbstractSupervisor, AbstractMessageInvoker):
         else:
             self._ensure_extras().watch(message.watcher)
 
-    def __handle_failure(self, message: Failure):
+    async def __handle_failure(self, message: Failure):
         if isinstance(self.actor, AbstractSupervisorStrategy):
-            self.actor.handle_failure(self, message.who, message.restart_statistics, message.reason)
+            await self.actor.handle_failure(self, message.who, message.restart_statistics, message.reason)
         else:
-            self._props.supervisor_strategy.handle_failure(self,
+            await self._props.supervisor_strategy.handle_failure(self,
                                                            message.who,
                                                            message.restart_statistics,
                                                            message.reason)
@@ -609,8 +616,8 @@ class ActorContext(AbstractContext, AbstractSupervisor, AbstractMessageInvoker):
         if self._state == ContextState.Stopping or self._state == ContextState.Restarting:
             await self.__try_restart_or_stop()
 
-    def __handle_root_failure(self, failure):
-        Supervision.default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)
+    async def __handle_root_failure(self, failure):
+        await Supervision.default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)
 
     async def __initiate_stop(self):
         if self._state == ContextState.Stopping:
@@ -707,10 +714,12 @@ class EmptyActor(Actor):
         await self._receive(context)
 
 
-class GlobalRootContext(metaclass=singleton):
-    def __init__(self):
-        self.__instance = RootContext()
+# class GlobalRootContext(metaclass=Singleton):
+#     def __init__(self):
+#         self.__instance = RootContext()
+#
+#     @property
+#     def instance(self) -> RootContext:
+#         return self.__instance
 
-    @property
-    def instance(self) -> RootContext:
-        return self.__instance
+GlobalRootContext = RootContext()

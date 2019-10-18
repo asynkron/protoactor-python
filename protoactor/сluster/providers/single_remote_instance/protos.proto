@@ -1,0 +1,7 @@
+syntax = "proto3";
+package singleremoteinstance;
+
+message GetKinds {}
+message GetKindsResponse {
+    repeated string kinds=1;
+}

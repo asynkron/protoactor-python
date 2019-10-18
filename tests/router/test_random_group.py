@@ -22,9 +22,9 @@ async def test_random_group_router_routees_receive_messages_in_random_order():
     await context.send(router, '2')
     await context.send(router, '3')
 
-    assert await context.request_async(routee1, 'received?', timeout) == '3'
-    assert await context.request_async(routee2, 'received?', timeout) == '2'
-    assert await context.request_async(routee3, 'received?', timeout) == '1'
+    assert await context.request_future(routee1, 'received?', timeout) == '3'
+    assert await context.request_future(routee2, 'received?', timeout) == '2'
+    assert await context.request_future(routee3, 'received?', timeout) == '1'
 
 
 @pytest.mark.asyncio
@@ -39,10 +39,10 @@ async def test_random_group_router_newly_added_routees_receive_messages():
     await context.send(router, '3')
     await context.send(router, '4')
 
-    assert await context.request_async(routee1, 'received?', timeout) == '4'
-    assert await context.request_async(routee2, 'received?', timeout) is None
-    assert await context.request_async(routee3, 'received?', timeout) == '1'
-    assert await context.request_async(routee4, 'received?', timeout) is None
+    assert await context.request_future(routee1, 'received?', timeout) == '4'
+    assert await context.request_future(routee2, 'received?', timeout) is None
+    assert await context.request_future(routee3, 'received?', timeout) == '1'
+    assert await context.request_future(routee4, 'received?', timeout) is None
 
 
 @pytest.mark.asyncio
@@ -54,7 +54,7 @@ async def test_random_group_router_removed_routees_do_not_receive_messages():
     for i in range(100):
         await context.send(router, i)
 
-    assert await context.request_async(routee1, 'received?', timeout) is None
+    assert await context.request_future(routee1, 'received?', timeout) is None
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,7 @@ async def test_random_group_router_routees_can_be_removed():
 
     await context.send(router, RemoveRoutee(routee1))
 
-    routees = await context.request_async(router, GetRoutees(), timeout)
+    routees = await context.request_future(router, GetRoutees(), timeout)
     assert routee1 not in routees.pids
     assert routee2 in routees.pids
     assert routee3 in routees.pids
@@ -75,7 +75,7 @@ async def test_random_group_router_routees_can_be_added():
     routee4 = context.spawn(my_actor_props)
     await context.send(router, AddRoutee(routee4))
 
-    routees = await context.request_async(router, GetRoutees(), timeout)
+    routees = await context.request_future(router, GetRoutees(), timeout)
     assert routee1 in routees.pids
     assert routee2 in routees.pids
     assert routee3 in routees.pids
@@ -88,9 +88,9 @@ async def test_random_group_router_all_routees_receive_router_broadcast_messages
 
     await context.send(router, BroadcastMessage('hello'))
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee2, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee3, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee1, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee2, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee3, 'received?', timeout) == 'hello'
 
 
 def create_router_with3_routees():

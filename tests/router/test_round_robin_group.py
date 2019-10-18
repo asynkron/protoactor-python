@@ -20,24 +20,24 @@ async def test_round_robin_group_router_routees_receive_messages_in_round_robin_
     await context.send(router, '1')
 
     # only routee1 has received the message
-    assert await context.request_async(routee1, 'received?', timeout) == '1'
-    assert await context.request_async(routee2, 'received?', timeout) is None
-    assert await context.request_async(routee3, 'received?', timeout) is None
+    assert await context.request_future(routee1, 'received?', timeout) == '1'
+    assert await context.request_future(routee2, 'received?', timeout) is None
+    assert await context.request_future(routee3, 'received?', timeout) is None
 
     await context.send(router, '2')
     await context.send(router, '3')
 
     # routees 2 and 3 receive next messages
-    assert await context.request_async(routee1, 'received?', timeout) == '1'
-    assert await context.request_async(routee2, 'received?', timeout) == '2'
-    assert await context.request_async(routee3, 'received?', timeout) == '3'
+    assert await context.request_future(routee1, 'received?', timeout) == '1'
+    assert await context.request_future(routee2, 'received?', timeout) == '2'
+    assert await context.request_future(routee3, 'received?', timeout) == '3'
 
     await context.send(router, '4')
 
     # Round robin kicks in and routee1 recevies next message
-    assert await context.request_async(routee1, 'received?', timeout) == '4'
-    assert await context.request_async(routee2, 'received?', timeout) == '2'
-    assert await context.request_async(routee3, 'received?', timeout) == '3'
+    assert await context.request_future(routee1, 'received?', timeout) == '4'
+    assert await context.request_future(routee2, 'received?', timeout) == '2'
+    assert await context.request_future(routee3, 'received?', timeout) == '3'
 
 
 @pytest.mark.asyncio
@@ -46,7 +46,7 @@ async def test_round_robin_group_router_routees_can_be_removed():
 
     await context.send(router, RemoveRoutee(routee1))
 
-    routees = await context.request_async(router, GetRoutees(), timeout)
+    routees = await context.request_future(router, GetRoutees(), timeout)
     assert routee1 not in routees.pids
     assert routee2 in routees.pids
     assert routee3 in routees.pids
@@ -58,7 +58,7 @@ async def test_round_robin_group_router_routees_can_be_added():
     routee4 = context.spawn(my_actor_props)
     await context.send(router, AddRoutee(routee4))
 
-    routees = await context.request_async(router, GetRoutees(), timeout)
+    routees = await context.request_future(router, GetRoutees(), timeout)
     assert routee1 in routees.pids
     assert routee2 in routees.pids
     assert routee3 in routees.pids
@@ -78,9 +78,9 @@ async def test_round_robin_group_router_removed_routees_no_longer_receive_messag
     await context.send(router, '3')
     await context.send(router, '3')
 
-    assert await context.request_async(routee1, 'received?', timeout) == '0'
-    assert await context.request_async(routee2, 'received?', timeout) == '3'
-    assert await context.request_async(routee3, 'received?', timeout) == '3'
+    assert await context.request_future(routee1, 'received?', timeout) == '0'
+    assert await context.request_future(routee2, 'received?', timeout) == '3'
+    assert await context.request_future(routee3, 'received?', timeout) == '3'
 
 
 @pytest.mark.asyncio
@@ -89,9 +89,9 @@ async def test_round_robin_group_router_all_routees_receive_router_broadcast_mes
 
     await context.send(router, BroadcastMessage('hello'))
 
-    assert await context.request_async(routee1, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee2, 'received?', timeout) == 'hello'
-    assert await context.request_async(routee3, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee1, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee2, 'received?', timeout) == 'hello'
+    assert await context.request_future(routee3, 'received?', timeout) == 'hello'
 
 
 def create_router_with3_routees():

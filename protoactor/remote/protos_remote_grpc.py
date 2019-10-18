@@ -2,9 +2,12 @@
 # source: protoactor/remote/protos_remote.proto
 # plugin: grpclib.plugin.main
 import abc
+import typing
 
 import grpclib.const
 import grpclib.client
+if typing.TYPE_CHECKING:
+    import grpclib.server
 
 import protoactor.actor.protos_pb2
 import protoactor.remote.protos_remote_pb2
@@ -13,14 +16,14 @@ import protoactor.remote.protos_remote_pb2
 class RemotingBase(abc.ABC):
 
     @abc.abstractmethod
-    async def Connect(self, stream):
+    async def Connect(self, stream: 'grpclib.server.Stream[protoactor.remote.protos_remote_pb2.ConnectRequest, protoactor.remote.protos_remote_pb2.ConnectResponse]') -> None:
         pass
 
     @abc.abstractmethod
-    async def Receive(self, stream):
+    async def Receive(self, stream: 'grpclib.server.Stream[protoactor.remote.protos_remote_pb2.MessageBatch, protoactor.remote.protos_remote_pb2.Unit]') -> None:
         pass
 
-    def __mapping__(self):
+    def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:
         return {
             '/remote.Remoting/Connect': grpclib.const.Handler(
                 self.Connect,

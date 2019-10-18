@@ -20,11 +20,13 @@ async def test_reenter_after_can_do_action_for_task():
                 queue.put('bar')
                 return 'hey1'
 
-            async def action(result):
-                queue.put('baz')
-                await ctx.respond(result)
+            task = asyncio.ensure_future(target())
 
-            ctx.reenter_after(target, action)
+            async def action():
+                queue.put('baz')
+                await ctx.respond(task.result())
+
+            ctx.reenter_after(task, action)
         elif ctx.message == 'hello2':
             queue.put('foo')
             await ctx.respond('hey2')
@@ -32,8 +34,8 @@ async def test_reenter_after_can_do_action_for_task():
     props = Props.from_func(actor)
     pid = context.spawn(props)
 
-    task1 = asyncio.ensure_future(context.request_async(pid, "hello1"))
-    task2 = asyncio.ensure_future(context.request_async(pid, "hello2"))
+    task1 = asyncio.ensure_future(context.request_future(pid, "hello1"))
+    task2 = asyncio.ensure_future(context.request_future(pid, "hello2"))
 
     reply1 = await task1
     reply2 = await task2

@@ -19,7 +19,7 @@ from protoactor.actor.props import Props
 from protoactor.actor.protos_pb2 import Watch, Unwatch, Terminated, PID, Stop
 from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.supervision import AbstractSupervisorStrategy, AbstractSupervisor, Supervision
-from protoactor.actor.utils import singleton
+from protoactor.actor.utils import Singleton
 from protoactor.mailbox.dispatcher import Dispatchers
 from protoactor.mailbox.mailbox import AbstractMailbox
 from protoactor.mailbox.queue import UnboundedMailboxQueue
@@ -44,34 +44,33 @@ class RemoteConfig():
         self.advertised_port = None
 
 
-class Remote(metaclass=singleton):
+class Remote(metaclass=Singleton):
     def __init__(self):
-        self.__logger = None
+        self._logger = None
         self._server = None
-        self.__kinds = {}
-        self.__remote_config = None
-        self.__activator_pid = None
+        self._kinds = {}
+        self._remote_config = None
+        self._activator_pid = None
         self._endpoint_reader = None
 
     @property
     def remote_config(self) -> RemoteConfig:
-        return self.__remote_config
+        return self._remote_config
 
-    @property
     def get_known_kinds(self) -> list:
-        return list(self.__kinds.keys())
+        return list(self._kinds.keys())
 
     def register_known_kind(self, kind: str, props: Props) -> None:
-        self.__kinds[kind] = props
+        self._kinds[kind] = props
 
     def get_known_kind(self, kind: str) -> Props:
-        props = self.__kinds.get(kind)
+        props = self._kinds.get(kind)
         if props is None:
             raise ValueError("save must be True if recurse is True")
         return props
 
     def start(self, hostname: str, port: int, config: RemoteConfig = RemoteConfig()) -> None:
-        self.__remote_config = config
+        self._remote_config = config
         ProcessRegistry().register_host_resolver(RemoteProcess)
         EndpointManager().start()
         self._endpoint_reader = EndpointReader()
@@ -96,8 +95,8 @@ class Remote(metaclass=singleton):
             #                         (ProcessRegistry().address, gracefull))
         except Exception as e:
             self._server.close()
-            self.__logger.log_debug('Proto.Actor server stopped on %s. with error:%s' %
-                                    (ProcessRegistry().address, str(e)))
+            self._logger.log_debug('Proto.Actor server stopped on %s. with error:%s' %
+                                   (ProcessRegistry().address, str(e)))
 
     def activator_for_address(self, address):
         return PID(address=address, id='activator')
@@ -107,8 +106,8 @@ class Remote(metaclass=singleton):
 
     async def spawn_named_async(self, address, name, kind, timeout):
         activator = self.activator_for_address(address)
-        return await GlobalRootContext().instance.request_async(activator, ActorPidRequest(name=name, kind=kind),
-                                                                timeout=timeout)
+        return await GlobalRootContext.request_future(activator, ActorPidRequest(name=name, kind=kind),
+                                                      timeout=timeout)
 
     async def send_message(self, pid, msg, serializer_id):
         message, sender, header = actor.MessageEnvelope.unwrap(msg)
@@ -117,11 +116,11 @@ class Remote(metaclass=singleton):
 
     def __spawn_activator(self):
         props = Props().from_producer(Activator) \
-            .with_guardian_supervisor_strategy(Supervision().always_restart_strategy)
-        self.__activator_pid = GlobalRootContext().instance.spawn_named(props, 'activator')
+            .with_guardian_supervisor_strategy(Supervision.always_restart_strategy)
+        self._activator_pid = GlobalRootContext.spawn_named(props, 'activator')
 
     def __stop_activator(self):
-        self.__activator_pid.stop()
+        self._activator_pid.stop()
 
     async def __run(self, hostname: str, port: int):
         self._server = Server([self._endpoint_reader], loop=asyncio.get_event_loop())
@@ -148,7 +147,7 @@ class RemoteProcess(AbstractProcess):
             await Remote().send_message(self._pid, message, -1)
 
 
-class EndpointManager(metaclass=singleton):
+class EndpointManager(metaclass=Singleton):
     def __init__(self):
         self._logger = None
         self._connections = {}
@@ -158,14 +157,14 @@ class EndpointManager(metaclass=singleton):
 
     def start(self) -> None:
         # self.__logger.log_debug('Started EndpointManager')
-        props = Props().from_producer(EndpointSupervisor)\
-            .with_guardian_supervisor_strategy(Supervision().always_restart_strategy)
+        props = Props().from_producer(EndpointSupervisor) \
+            .with_guardian_supervisor_strategy(Supervision.always_restart_strategy)
 
-        self._endpoint_supervisor = GlobalRootContext().instance.spawn_named(props, 'EndpointSupervisor')
-        self._endpoint_conn_evn_sub = GlobalEventStream().instance.subscribe(self.__on_endpoint_connected,
-                                                                             EndpointConnectedEvent)
-        self._endpoint_term_evn_sub = GlobalEventStream().instance.subscribe(self.__on_endpoint_terminated,
-                                                                             EndpointTerminatedEvent)
+        self._endpoint_supervisor = GlobalRootContext.spawn_named(props, 'EndpointSupervisor')
+        self._endpoint_conn_evn_sub = GlobalEventStream.subscribe(self.__on_endpoint_connected,
+                                                                  EndpointConnectedEvent)
+        self._endpoint_term_evn_sub = GlobalEventStream.subscribe(self.__on_endpoint_terminated,
+                                                                  EndpointTerminatedEvent)
 
     def stop(self) -> None:
         self._endpoint_conn_evn_sub.unsubscribe()
@@ -177,35 +176,35 @@ class EndpointManager(metaclass=singleton):
 
     async def remote_watch(self, msg: RemoteWatch) -> None:
         endpoint = await self.__ensure_connected(msg.watchee.address)
-        await GlobalRootContext().instance.send(endpoint.watcher, msg)
+        await GlobalRootContext.send(endpoint.watcher, msg)
 
     async def remote_unwatch(self, msg: RemoteUnwatch) -> None:
         endpoint = await self.__ensure_connected(msg.watchee.address)
-        await GlobalRootContext().instance.send(endpoint.watcher, msg)
+        await GlobalRootContext.send(endpoint.watcher, msg)
 
     async def remote_deliver(self, msg: RemoteDeliver) -> None:
         endpoint = await self.__ensure_connected(msg.target.address)
-        await GlobalRootContext().instance.send(endpoint.writer, msg)
+        await GlobalRootContext.send(endpoint.writer, msg)
 
     async def remote_terminate(self, msg: RemoteTerminate):
         endpoint = await self.__ensure_connected(msg.watchee.address)
-        await GlobalRootContext().instance.send(endpoint.watcher, msg)
+        await GlobalRootContext.send(endpoint.watcher, msg)
 
     async def __on_endpoint_connected(self, msg: EndpointConnectedEvent) -> None:
         endpoint = await self.__ensure_connected(msg.address)
-        await GlobalRootContext().instance.send(endpoint.watcher, msg)
+        await GlobalRootContext.send(endpoint.watcher, msg)
 
     async def __on_endpoint_terminated(self, msg: EndpointTerminatedEvent) -> None:
         endpoint = self._connections.get(msg.address)
         if endpoint is not None:
-            await GlobalRootContext().instance.send(endpoint.watcher, msg)
-            await GlobalRootContext().instance.send(endpoint.writer, msg)
+            await GlobalRootContext.send(endpoint.watcher, msg)
+            await GlobalRootContext.send(endpoint.writer, msg)
             del self._connections[msg.address]
 
     async def __ensure_connected(self, address) -> Endpoint:
         endpoint = self._connections.get(address)
         if endpoint is None:
-            endpoint = await GlobalRootContext().instance.request_async(self._endpoint_supervisor, address)
+            endpoint = await GlobalRootContext.request_future(self._endpoint_supervisor, address)
             self._connections[address] = endpoint
         return endpoint
 
@@ -247,7 +246,7 @@ class EndpointReader(RemotingBase):
                     if envelope.message_header is not None:
                         header = proto.MessageHeader(envelope.message_header.header_data)
                     local_envelope = proto.MessageEnvelope(message, envelope.sender, header)
-                    await GlobalRootContext().instance.send(target, local_envelope)
+                    await GlobalRootContext.send(target, local_envelope)
 
         await stream.send_message(Unit())
 
@@ -422,7 +421,7 @@ class EndpointWriter(Actor):
             await asyncio.sleep(2000)
             raise Exception()
 
-        GlobalEventStream().instance.publish(EndpointConnectedEvent(self._address))
+        await GlobalEventStream.publish(EndpointConnectedEvent(self._address))
         # self.__logger.log_debug("")
 
     async def __stopped_async(self):
@@ -436,7 +435,7 @@ class EndpointWriter(Actor):
         try:
             await self._client.Receive([batch])
         except StreamTerminatedError:
-            GlobalEventStream().instance.publish(EndpointTerminatedEvent(self._address))
+            await GlobalEventStream.publish(EndpointTerminatedEvent(self._address))
 
 
 class EndpointWriterMailbox(AbstractMailbox):
@@ -547,7 +546,7 @@ class Activator(Actor):
             if name is None:
                 name = ProcessRegistry().next_id()
             try:
-                pid = GlobalRootContext().instance.spawn_named(props, name)
+                pid = GlobalRootContext.spawn_named(props, name)
                 response = ActorPidResponse(pid=pid)
                 await context.respond(response)
             except ProcessNameExistException as ex:

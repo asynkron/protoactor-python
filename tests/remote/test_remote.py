@@ -27,14 +27,14 @@ async def test_can_spawn_remote_actor(remote_manager):
                                                          remote_actor_name,
                                                          'EchoActor', timedelta(seconds=5))
     remote_actor = remote_actor_resp.pid
-    pong = await root_context.request_async(remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=5))
+    pong = await root_context.request_future(remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=5))
     assert "%s Hello" % remote_manager.default_node_address == pong.message
 
 
 @pytest.mark.asyncio
 async def test_can_send_and_receive_to_existing_remote(remote_manager):
     remote_actor = PID(address=remote_manager.default_node_address, id='EchoActorInstance')
-    pong = await root_context.request_async(remote_actor, Ping(message="Hello"), timeout=timedelta(seconds=0.5))
+    pong = await root_context.request_future(remote_actor, Ping(message="Hello"), timeout=timedelta(seconds=0.5))
     assert "%s Hello" % remote_manager.default_node_address == pong.message
 
 
@@ -42,7 +42,7 @@ async def test_can_send_and_receive_to_existing_remote(remote_manager):
 async def test_when_remote_actor_not_found_request_async_timesout(remote_manager):
     unknown_remote_actor = PID(address=remote_manager.default_node_address, id="doesn't exist")
     with pytest.raises(TimeoutError) as e:
-        await root_context.request_async(unknown_remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=0.2))
+        await root_context.request_future(unknown_remote_actor, Ping(message='Hello'), timeout=timedelta(seconds=0.2))
 
     assert 'TimeoutError' in str(e)
 
@@ -54,10 +54,10 @@ async def test_can_watch_remote_actor(remote_manager):
     await remote_actor.stop()
 
     async def func():
-        return await root_context.request_async(local_actor,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func)
 
@@ -72,16 +72,16 @@ async def test_can_watch_multiple_remote_actors(remote_manager):
     await remote_actor2.stop()
 
     async def func1():
-        return await root_context.request_async(local_actor,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor1.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     async def func2():
-        return await root_context.request_async(local_actor,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor2.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func1)
     assert await poll_until_true(func2)
@@ -97,16 +97,16 @@ async def test_multiple_local_actors_can_watch_remote_actor(remote_manager):
     await remote_actor.stop()
 
     async def func1():
-        return await root_context.request_async(local_actor1,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor1,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     async def func2():
-        return await root_context.request_async(local_actor2,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor2,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func1)
     assert await poll_until_true(func2)
@@ -124,16 +124,16 @@ async def test_can_unwatch_remote_actor(remote_manager):
     await remote_actor.stop()
 
     async def func1():
-        return await root_context.request_async(local_actor1,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor1,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     async def func2():
-        return await root_context.request_async(local_actor2,
-                                                TerminatedMessageReceived(remote_manager.default_node_address,
+        return await root_context.request_future(local_actor2,
+                                                 TerminatedMessageReceived(remote_manager.default_node_address,
                                                                           remote_actor.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func1)
     assert not await poll_until_true(func2)
@@ -153,14 +153,14 @@ async def test_when_remote_terminated_local_watcher_receives_notification(remote
     await asyncio.sleep(0.2)
 
     async def func1():
-        return await root_context.request_async(local_actor,
-                                                TerminatedMessageReceived(address,
+        return await root_context.request_future(local_actor,
+                                                 TerminatedMessageReceived(address,
                                                                           remote_actor.id),
-                                                timeout=timedelta(seconds=5))
+                                                 timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func1)
-    assert await root_context.request_async(local_actor, GetTerminatedMessagesCount(),
-                                            timeout=timedelta(seconds=5)) == 1
+    assert await root_context.request_future(local_actor, GetTerminatedMessagesCount(),
+                                             timeout=timedelta(seconds=5)) == 1
 
 
 @pytest.fixture(scope="session", autouse=True)

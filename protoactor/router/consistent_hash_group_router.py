@@ -64,6 +64,6 @@ class ConsistentHashRouterState(RouterState):
             key = msg.hash_by()
             node = self._hash_ring.get_node(key)
             routee = self._routee_map[node]
-            await GlobalRootContext().instance.send(routee, message)
+            await GlobalRootContext.send(routee, message)
         else:
             raise AttributeError('Message of type %s does not implement AbstractHashable' % type(message).__name__)

@@ -84,7 +84,7 @@ async def main():
     print('0 SpanID: ' + root.headers.get('SpanID'))
     print('0 ParentSpanID: ' + root.headers.get('ParentSpanID', ''))
 
-    res = await root.request_async(pid, "hello")
+    res = await root.request_future(pid, "hello")
     print('Got result ' + res)
 
     await asyncio.sleep(0.5)

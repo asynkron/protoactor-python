@@ -3,7 +3,7 @@ from typing import Optional
 
 from protoactor.actor.protos_pb2 import PID
 from protoactor.actor.restart_statistics import RestartStatistics
-from protoactor.actor.utils import singleton
+from protoactor.actor.utils import Singleton
 
 
 class AbstractSystemMessage:
@@ -14,7 +14,7 @@ class AutoReceiveMessage(metaclass=ABCMeta):
     pass
 
 
-class Restarting(metaclass=singleton):
+class Restarting(metaclass=Singleton):
     pass
 
 class Restart(AbstractSystemMessage):
@@ -67,7 +67,7 @@ class Started(AbstractSystemMessage):
     pass
 
 
-class ReceiveTimeout(AbstractSystemMessage, metaclass=singleton):
+class ReceiveTimeout(AbstractSystemMessage, metaclass=Singleton):
     pass
 
 

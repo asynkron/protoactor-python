@@ -1,2 +1,4 @@
 protobuf
 grpclib
+aiohttp
+jinja2

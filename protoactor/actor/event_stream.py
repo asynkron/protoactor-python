@@ -3,32 +3,31 @@ from uuid import uuid4
 
 from protoactor.actor.log import get_logger
 from protoactor.actor.messages import DeadLetterEvent
-from protoactor.actor.utils import singleton
 
 from protoactor.mailbox.dispatcher import Dispatchers, AbstractDispatcher
 
 
 class Subscription():
     def __init__(self, event_stream, action, dispatcher):
-        self.__event_stream = event_stream
-        self.__dispatcher = dispatcher
-        self.__action = action
-        self.__id = uuid4()
+        self._event_stream = event_stream
+        self._dispatcher = dispatcher
+        self._action = action
+        self._id = uuid4()
 
     @property
     def id(self):
-        return self.__id
+        return self._id
 
     @property
     def dispatcher(self):
-        return self.__dispatcher
+        return self._dispatcher
 
     @property
     def action(self):
-        return self.__action
+        return self._action
 
     def unsubscribe(self):
-        self.__event_stream.unsubscribe(self.__id)
+        self._event_stream.unsubscribe(self._id)
 
 
 class EventStream():
@@ -49,14 +48,12 @@ class EventStream():
         self._subscriptions[sub.id] = sub
         return sub
 
-    def publish(self, message: object) -> None:
+    async def publish(self, message: object) -> None:
         for sub in self._subscriptions.values():
-            async def action():
-                try:
-                    await sub.action(message)
-                except Exception:
-                    self._logger.log_warning('Exception has occurred when publishing a message.')
-            sub.dispatcher.schedule(action)
+            try:
+                await sub.action(message)
+            except Exception:
+                self._logger.log_warning('Exception has occurred when publishing a message.')
 
     def unsubscribe(self, uniq_id):
         del self._subscriptions[uniq_id]
@@ -71,10 +68,12 @@ class EventStream():
         self._logger.info(console_message)
 
 
-class GlobalEventStream(metaclass=singleton):
-    def __init__(self):
-        self.__instance = EventStream()
+GlobalEventStream = EventStream()
 
-    @property
-    def instance(self):
-        return self.__instance
+# class GlobalEventStream(metaclass=Singleton):
+#     def __init__(self):
+#         self.__instance = EventStream()
+#
+#     @property
+#     def instance(self):
+#         return self.__instance
