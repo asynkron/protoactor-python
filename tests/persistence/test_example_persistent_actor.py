@@ -240,6 +240,7 @@ async def test_index_increments_on_events_saved():
 
     await root_context.send(pid, Multiply(4))
     index = await root_context.request_future(pid, GetIndex(), timedelta(seconds=1))
+
     assert index == 1
 
 
@@ -277,6 +278,7 @@ async def test_index_is_correct_after_recovery():
 
     await pid.stop()
     pid = root_context.spawn(props)
+    
     state = await root_context.request_future(pid, GetState(), timedelta(seconds=1))
     index = await root_context.request_future(pid, GetIndex(), timedelta(seconds=1))
 
@@ -427,4 +429,6 @@ def create_test_actor():
 async def restart_actor_and_get_state(pid, props):
     await pid.stop()
     pid = root_context.spawn(props)
+    
     return await root_context.request_future(pid, GetState(), timedelta(seconds=1))
+
