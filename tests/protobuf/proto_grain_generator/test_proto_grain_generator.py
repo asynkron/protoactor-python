@@ -64,17 +64,17 @@ import time
 #
 #     assert os.path.exists(file_path)
 
-def test_1():
-    grain_generator_path = os.path.abspath(
-        "../../../protobuf/proto_grain_generator/proto_grain_generator.py")
-
-    input_file_path = os.path.abspath("../../../examples/cluster_grain_hello_world/messages/protos_pb2.py")
-
-    process = subprocess.Popen(['python', grain_generator_path, input_file_path],
-                     stdout=subprocess.PIPE,
-                     stdin=subprocess.PIPE)
-
-    time.sleep(1)
-    process.kill()
-
-    assert True
+# def test_1():
+#     grain_generator_path = os.path.abspath(
+#         "../../../protobuf/proto_grain_generator/proto_grain_generator.py")
+#
+#     input_file_path = os.path.abspath("../../../examples/cluster_grain_hello_world/messages/protos_pb2.py")
+#
+#     process = subprocess.Popen(['python', grain_generator_path, input_file_path],
+#                      stdout=subprocess.PIPE,
+#                      stdin=subprocess.PIPE)
+#
+#     time.sleep(1)
+#     process.kill()
+#
+#     assert True
