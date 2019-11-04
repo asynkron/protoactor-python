@@ -3,8 +3,9 @@ from datetime import timedelta
 
 import pytest
 
+from protoactor.actor.actor import Actor
 from protoactor.actor.props import Props
-from protoactor.actor.actor_context import Actor, AbstractContext, RootContext
+from protoactor.actor.actor_context import AbstractContext, RootContext
 from protoactor.router.messages import AddRoutee, RemoveRoutee, GetRoutees, BroadcastMessage
 from protoactor.router.router import Router
 from tests.test_fixtures.mock_mailbox import MockMailbox

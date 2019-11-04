@@ -1,6 +1,7 @@
 from threading import Event
 
-from protoactor.actor.actor_context import Actor, AbstractContext
+from protoactor.actor.actor import Actor
+from protoactor.actor.actor_context import AbstractContext
 from protoactor.actor.messages import Started
 from protoactor.actor.protos_pb2 import Terminated
 from protoactor.router.messages import AddRoutee, RemoveRoutee, BroadcastMessage, GetRoutees, Routees, \

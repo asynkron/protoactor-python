@@ -3,7 +3,8 @@ from datetime import timedelta
 
 import pytest
 
-from protoactor.actor.actor_context import RootContext, Actor, AbstractContext
+from protoactor.actor.actor import Actor
+from protoactor.actor.actor_context import RootContext, AbstractContext
 from protoactor.actor.props import Props
 from protoactor.router.messages import AbstractHashable, AddRoutee, RemoveRoutee, GetRoutees, BroadcastMessage
 from protoactor.router.router import Router
