@@ -2,7 +2,7 @@ import threading
 
 is_import = False
 if is_import:
-    from protoactor.сluster.member_strategy import AbstractMemberStrategy
+    from protoactor.cluster.member_strategy import AbstractMemberStrategy
 
 
 class RoundRobin:

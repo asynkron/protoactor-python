@@ -4,7 +4,7 @@ from threading import RLock
 from typing import Callable, Tuple, List, Optional
 
 from protoactor.actor import ProcessRegistry, PID
-from protoactor.actor.actor import GlobalRootContext, Actor, AbstractContext
+from protoactor.actor.actor_context import GlobalRootContext, Actor, AbstractContext
 from protoactor.actor.cancel_token import CancelToken
 from protoactor.actor.event_stream import GlobalEventStream
 from protoactor.actor.messages import Started
@@ -16,14 +16,14 @@ from protoactor.remote.protos_remote_pb2 import ActorPidRequest, ActorPidRespons
 from protoactor.remote.remote import RemoteConfig, Remote
 from protoactor.remote.response import ResponseStatusCode
 from protoactor.remote.serialization import Serialization
-from protoactor.сluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer, \
+from protoactor.cluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer, \
     NullMemberStatusValueSerializer, MemberStatus
-from protoactor.сluster.member_status_events import ClusterTopologyEvent, MemberJoinedEvent, MemberLeftEvent, \
+from protoactor.cluster.member_status_events import ClusterTopologyEvent, MemberJoinedEvent, MemberLeftEvent, \
     MemberRejoinedEvent, AbstractMemberStatusEvent
-from protoactor.сluster.member_strategy import SimpleMemberStrategy, AbstractMemberStrategy
-from protoactor.сluster.pid_cache import PidCache
-from protoactor.сluster.protos_pb2 import TakeOwnership, DESCRIPTOR
-from protoactor.сluster.providers.abstract_cluster_provider import AbstractClusterProvider
+from protoactor.cluster.member_strategy import SimpleMemberStrategy, AbstractMemberStrategy
+from protoactor.cluster.pid_cache import PidCache
+from protoactor.cluster.protos_pb2 import TakeOwnership, DESCRIPTOR
+from protoactor.cluster.providers.abstract_cluster_provider import AbstractClusterProvider
 
 
 class MemberList():

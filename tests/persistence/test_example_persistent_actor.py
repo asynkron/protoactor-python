@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import pytest
 
-from protoactor.actor.actor import RootContext, Actor, AbstractContext
+from protoactor.actor.actor_context import RootContext, Actor, AbstractContext
 from protoactor.actor.messages import Started
 from protoactor.actor.props import Props
 from protoactor.persistence.persistence import Persistence

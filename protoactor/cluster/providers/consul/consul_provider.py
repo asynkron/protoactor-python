@@ -4,11 +4,11 @@ from datetime import timedelta, datetime
 from typing import List
 
 from protoactor.actor.event_stream import GlobalEventStream
-from protoactor.сluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer, \
+from protoactor.cluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer, \
     MemberStatus
-from protoactor.сluster.member_status_events import ClusterTopologyEvent
-from protoactor.сluster.providers.abstract_cluster_provider import AbstractClusterProvider
-from protoactor.сluster.providers.consul.consul_client import ConsulClient, ConsulClientConfiguration
+from protoactor.cluster.member_status_events import ClusterTopologyEvent
+from protoactor.cluster.providers.abstract_cluster_provider import AbstractClusterProvider
+from protoactor.cluster.providers.consul.consul_client import ConsulClient, ConsulClientConfiguration
 
 
 class ConsulProviderOptions():

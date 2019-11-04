@@ -1,8 +1,8 @@
-from protoactor.сluster.hash_algorithms.fnv1a32 import FNV1A32
+from protoactor.cluster.hash_algorithms.fnv1a32 import FNV1A32
 
 is_import = False
 if is_import:
-    from protoactor.сluster.member_strategy import AbstractMemberStrategy
+    from protoactor.cluster.member_strategy import AbstractMemberStrategy
 
 
 class Rendezvous:

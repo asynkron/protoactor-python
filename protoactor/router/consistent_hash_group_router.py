@@ -1,7 +1,7 @@
 from typing import List, Callable, Any
 
 from protoactor.actor import PID
-from protoactor.actor.actor import GlobalRootContext
+from protoactor.actor.actor_context import GlobalRootContext
 from protoactor.actor.message_envelope import MessageEnvelope
 from protoactor.actor.props import Props
 from protoactor.router.hash import HashRing

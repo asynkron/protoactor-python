@@ -1,7 +1,7 @@
 from typing import List, Any, Iterable
 
 from protoactor.actor import PID
-from protoactor.actor.actor import GlobalRootContext
+from protoactor.actor.actor_context import GlobalRootContext
 from protoactor.actor.props import Props
 from protoactor.router.router_config import GroupRouterConfig, PoolRouterConfig
 from protoactor.router.router_state import RouterState

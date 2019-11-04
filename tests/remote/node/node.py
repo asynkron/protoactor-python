@@ -13,7 +13,7 @@ from protoactor.actor.props import Props
 from protoactor.remote.remote import Remote
 from protoactor.remote.serialization import Serialization
 from tests.remote.messages.protos_pb2 import Ping, Pong, DESCRIPTOR
-from protoactor.actor.actor import Actor, RootContext
+from protoactor.actor.actor_context import Actor, RootContext
 
 class EchoActor(Actor):
     def __init__(self, host, port):

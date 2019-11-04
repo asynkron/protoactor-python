@@ -2,17 +2,17 @@ import asyncio
 from datetime import timedelta
 from typing import List
 
-from protoactor.actor.actor import AbstractContext, GlobalRootContext
+from protoactor.actor.actor_context import AbstractContext, GlobalRootContext
 from protoactor.actor.event_stream import GlobalEventStream
 from protoactor.actor.props import Props
 from protoactor.mailbox.dispatcher import Dispatchers
 from protoactor.remote.remote import Remote
 from protoactor.remote.serialization import Serialization
-from protoactor.сluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer, \
+from protoactor.cluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer, \
     MemberStatus
-from protoactor.сluster.member_status_events import ClusterTopologyEvent
-from protoactor.сluster.providers.abstract_cluster_provider import AbstractClusterProvider
-from protoactor.сluster.providers.single_remote_instance.protos_pb2 import GetKinds, GetKindsResponse, DESCRIPTOR
+from protoactor.cluster.member_status_events import ClusterTopologyEvent
+from protoactor.cluster.providers.abstract_cluster_provider import AbstractClusterProvider
+from protoactor.cluster.providers.single_remote_instance.protos_pb2 import GetKinds, GetKindsResponse, DESCRIPTOR
 
 
 class SingleRemoteInstanceProvider(AbstractClusterProvider):

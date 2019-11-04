@@ -8,8 +8,9 @@ from grpclib.exceptions import GRPCError, StreamTerminatedError
 from grpclib.server import Server
 
 import protoactor.actor.message_envelope as proto
-from protoactor.actor import actor
-from protoactor.actor.actor import Actor, ProcessRegistry, GlobalRootContext, AbstractContext
+from protoactor.actor import actor_context
+from protoactor.actor.actor import Actor
+from protoactor.actor.actor_context import ProcessRegistry, GlobalRootContext, AbstractContext
 from protoactor.actor.behavior import Behavior
 from protoactor.actor.event_stream import GlobalEventStream
 from protoactor.actor.exceptions import ProcessNameExistException
@@ -110,7 +111,7 @@ class Remote(metaclass=Singleton):
                                                       timeout=timeout)
 
     async def send_message(self, pid, msg, serializer_id):
-        message, sender, header = actor.MessageEnvelope.unwrap(msg)
+        message, sender, header = actor_context.MessageEnvelope.unwrap(msg)
         env = RemoteDeliver(header, message, pid, sender, serializer_id)
         await EndpointManager().remote_deliver(env)
 
@@ -387,7 +388,7 @@ class EndpointWriter(Actor):
                     type_id = type_names[type_name]
 
                 header = None
-                if rd.header is not None and rd.header.count > 0:
+                if rd.header is not None and len(rd.header) > 0:
                     header = MessageHeader(header_data=rd.header)
 
                 message_data = Serialization().serialize(rd.message, serializer_id)

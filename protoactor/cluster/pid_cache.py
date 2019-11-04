@@ -1,14 +1,14 @@
 from typing import Tuple
 
-from protoactor.actor.actor import Actor, AbstractContext, GlobalRootContext
+from protoactor.actor.actor_context import Actor, AbstractContext, GlobalRootContext
 from protoactor.actor.event_stream import GlobalEventStream
 from protoactor.actor.messages import Started
 from protoactor.actor.props import Props
 from protoactor.actor.protos_pb2 import Terminated, PID
 from protoactor.actor.supervision import Supervision
 from protoactor.actor.utils import Singleton
-from protoactor.сluster.member_status_events import AbstractMemberStatusEvent, MemberLeftEvent, MemberRejoinedEvent
-from protoactor.сluster.messages import WatchPidRequest
+from protoactor.cluster.member_status_events import AbstractMemberStatusEvent, MemberLeftEvent, MemberRejoinedEvent
+from protoactor.cluster.messages import WatchPidRequest
 
 
 class PidCache(metaclass=Singleton):

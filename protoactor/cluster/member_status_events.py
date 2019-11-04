@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from typing import List
 
-from protoactor.сluster.member_status import MemberStatus
+from protoactor.cluster.member_status import MemberStatus
 
 
 class ClusterTopologyEvent():

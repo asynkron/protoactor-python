@@ -1,6 +1,7 @@
 import pytest
 
-from protoactor.actor.actor import RootContext, Actor
+from protoactor.actor.actor import Actor
+from protoactor.actor.actor_context import RootContext
 from protoactor.actor.behavior import Behavior
 from protoactor.actor.props import Props
 

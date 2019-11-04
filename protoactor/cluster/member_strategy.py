@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABCMeta
 from typing import List
 
-from protoactor.сluster.member_status import MemberStatus
-from protoactor.сluster.rendezvous import Rendezvous
-from protoactor.сluster.round_robin import RoundRobin
+from protoactor.cluster.member_status import MemberStatus
+from protoactor.cluster.rendezvous import Rendezvous
+from protoactor.cluster.round_robin import RoundRobin
 
 
 class AbstractMemberStrategy(metaclass=ABCMeta):

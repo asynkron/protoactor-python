@@ -1,4 +1,4 @@
-from protoactor.сluster.hash_algorithms.fnv1a32 import FNV1A32
+from protoactor.cluster.hash_algorithms.fnv1a32 import FNV1A32
 
 
 def test_hash_function():

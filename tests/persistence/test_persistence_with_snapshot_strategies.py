@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import pytest
 
-from protoactor.actor.actor import Actor, AbstractContext, RootContext
+from protoactor.actor.actor_context import Actor, AbstractContext, RootContext
 from protoactor.actor.props import Props
 from protoactor.persistence.persistence import Persistence
 from protoactor.persistence.snapshot_strategies.interval_strategy import IntervalStrategy

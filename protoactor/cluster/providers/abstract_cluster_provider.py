@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
-from protoactor.сluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer
+from protoactor.cluster.member_status import AbstractMemberStatusValue, AbstractMemberStatusValueSerializer
 
 
 class AbstractClusterProvider(metaclass=ABCMeta):

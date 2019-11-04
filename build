@@ -5,3 +5,4 @@ python3 -m grpc_tools.protoc -I. --python_out=. --python_grpc_out=. protoactor/Ñ
 python3 -m grpc_tools.protoc -I. --python_out=. --python_grpc_out=. examples/cluster_hello_world/messages/protos.proto
 python3 -m grpc_tools.protoc -I. --python_out=. --python_grpc_out=. examples/cluster_grain_hello_world/messages/protos.proto
 python3 -m grpc_tools.protoc -I. --python_out=. --python_grpc_out=. tests/protobuf/proto_grain_generator/messages/protos.proto
+python3 -m grpc_tools.protoc -I. --python_out=. --python_grpc_out=. examples/chat/messages/chat.proto

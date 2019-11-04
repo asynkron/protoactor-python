@@ -4,9 +4,9 @@ import sys
 from examples.cluster_grain_hello_world.messages.protos import Grains
 from examples.cluster_grain_hello_world.messages.protos_pb2 import DESCRIPTOR, HelloRequest
 from protoactor.remote.serialization import Serialization
-from protoactor.сluster.providers.consul.consul_client import ConsulClientConfiguration
-from protoactor.сluster.providers.consul.consul_provider import ConsulProvider
-from protoactor.сluster.сluster import Cluster
+from protoactor.cluster.providers.consul.consul_client import ConsulClientConfiguration
+from protoactor.cluster.providers.consul.consul_provider import ConsulProvider
+from protoactor.cluster.сluster import Cluster
 
 
 async def start(argv):
