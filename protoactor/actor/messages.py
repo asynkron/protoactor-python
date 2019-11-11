@@ -6,9 +6,11 @@ from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.utils import Singleton
 
 
-class AbstractSystemMessage:
+class AbstractSystemMessage():
     pass
 
+class AbstractNotInfluenceReceiveTimeout(metaclass=ABCMeta):
+    pass
 
 class AutoReceiveMessage(metaclass=ABCMeta):
     pass
@@ -16,6 +18,7 @@ class AutoReceiveMessage(metaclass=ABCMeta):
 
 class Restarting(metaclass=Singleton):
     pass
+
 
 class Restart(AbstractSystemMessage):
     def __init__(self, reason):
@@ -43,16 +46,6 @@ class Failure(AbstractSystemMessage):
 
 class SystemMessage:
     pass
-
-#
-# class Watch:
-#     # TODO: Implement
-#     pass
-#
-#
-# class Unwatch(AbstractSystemMessage):
-#     def __init__(self, watcher: PID) -> None:
-#         self.watcher = watcher
 
 
 class Stopping(AutoReceiveMessage):

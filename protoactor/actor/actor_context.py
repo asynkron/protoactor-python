@@ -23,6 +23,7 @@ from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.supervision import AbstractSupervisor, Supervision, \
     AbstractSupervisorStrategy
 from protoactor.mailbox.dispatcher import AbstractMessageInvoker
+from protoactor.utils.async_timer import AsyncTimer, AsyncTimer
 
 is_import = False
 if is_import:
@@ -307,7 +308,7 @@ class ActorContextExtras():
         return self._children
 
     @property
-    def receive_timeout_timer(self) -> Timer:
+    def receive_timeout_timer(self) -> AsyncTimer:
         return self._receive_timeout_timer
 
     @property
@@ -326,12 +327,13 @@ class ActorContextExtras():
     def context(self) -> AbstractContext:
         return self._context
 
-    def init_receive_timeout_timer(self, timer: Timer) -> None:
+    def init_receive_timeout_timer(self, timer: AsyncTimer) -> None:
         self._receive_timeout_timer = timer
 
     def reset_receive_timeout_timer(self) -> None:
         self._receive_timeout_timer.cancel()
-        self._receive_timeout_timer = Timer(self._receive_timeout_timer.interval, self._receive_timeout_timer.function)
+        self._receive_timeout_timer = AsyncTimer(self._receive_timeout_timer.interval,
+                                                 self._receive_timeout_timer.function)
         self._receive_timeout_timer.start()
 
     def stop_receive_timeout_timer(self) -> None:
@@ -455,8 +457,8 @@ class ActorContext(AbstractActorContext):
 
         self._ensure_extras()
         if self._extras.receive_timeout_timer is None:
-            self._extras.init_receive_timeout_timer(Timer(self._receive_timeout.total_seconds(),
-                                                          self.__receive_timeout_callback))
+            self._extras.init_receive_timeout_timer(AsyncTimer(self._receive_timeout,
+                                                               self.__receive_timeout_callback))
         else:
             self.__reset_receive_timeout()
 
@@ -467,7 +469,7 @@ class ActorContext(AbstractActorContext):
         self.__stop_receive_timeout()
         self._extras.kill_receive_timeout_timer()
 
-        self._receive_timeout = None
+        self._receive_timeout = timedelta()
 
     async def send(self, target: PID, message: any) -> None:
         await self.__send_user_message(target, message)
@@ -499,10 +501,12 @@ class ActorContext(AbstractActorContext):
             if len(list(signature(action).parameters)) == 0:
                 async def fn():
                     return await action()
+
                 await self.my_self.send_system_message(Continuation(fn, msg))
             else:
                 async def fn():
                     return await action(result)
+
                 await self.my_self.send_system_message(Continuation(fn, msg))
 
         asyncio.ensure_future(run(self._message_or_envelope))
@@ -758,12 +762,12 @@ class ActorContext(AbstractActorContext):
             if self._extras.receive_timeout_timer is not None:
                 self._extras.stop_receive_timeout_timer()
 
-    def __receive_timeout_callback(self):
+    async def __receive_timeout_callback(self):
         if self._extras is None or self._extras.receive_timeout_timer is None:
             return
 
         self.cancel_receive_timeout()
-        self.send(self.my_self, ReceiveTimeout())
+        await self.send(self.my_self, ReceiveTimeout())
 
     def _ensure_extras(self) -> ActorContextExtras:
         if self._extras is None:
