@@ -5,7 +5,6 @@ from datetime import timedelta
 from enum import Enum
 from functools import reduce
 from inspect import signature
-from threading import Timer
 from typing import Callable, List, Awaitable, Any
 
 from protoactor.actor import messages
@@ -23,7 +22,7 @@ from protoactor.actor.restart_statistics import RestartStatistics
 from protoactor.actor.supervision import AbstractSupervisor, Supervision, \
     AbstractSupervisorStrategy
 from protoactor.mailbox.dispatcher import AbstractMessageInvoker
-from protoactor.utils.async_timer import AsyncTimer, AsyncTimer
+from protoactor.utils.async_timer import AsyncTimer
 
 is_import = False
 if is_import:
