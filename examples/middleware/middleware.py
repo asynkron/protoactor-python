@@ -3,7 +3,7 @@ import uuid
 import asyncio
 
 from protoactor.actor.props import Props
-from protoactor.actor.actor import RootContext
+from protoactor.actor.actor_context import RootContext
 from protoactor.actor.message_header import MessageHeader
 
 

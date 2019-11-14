@@ -3,7 +3,8 @@ from functools import reduce
 from typing import Callable, List
 
 from protoactor.actor import ProcessRegistry
-from protoactor.actor.actor import ActorContext, Actor, EmptyActor, AbstractContext, Started, AbstractReceiverContext, \
+from protoactor.actor.actor import Actor, EmptyActor
+from protoactor.actor.actor_context import ActorContext, AbstractContext, Started, AbstractReceiverContext, \
     AbstractSenderContext
 from protoactor.actor.exceptions import ProcessNameExistException
 from protoactor.actor.message_envelope import MessageEnvelope
@@ -126,6 +127,14 @@ class Props:
     def with_mailbox(self, mailbox_producer: Callable[..., mailbox.AbstractMailbox]) -> 'Props':
         return self.__copy_with({'_Props__mailbox_producer': mailbox_producer})
 
+    def with_context_decorator(self, context_decorator: List[Callable[[AbstractContext], AbstractContext]]) -> 'Props':
+        new_context_decorator = self.__get_decorator(self.__context_decorator, context_decorator)
+        context_decorator_chain = reduce(lambda inner, outer: lambda ctx: outer(inner(ctx)), new_context_decorator,
+                                         default_context_decorator)
+
+        return self.__copy_with({'_Props__context_decorator': new_context_decorator,
+                                 '_Props__context_decorator_chain': context_decorator_chain})
+
     def with_guardian_supervisor_strategy(self, guardian_strategy) -> 'Props':
         return self.__copy_with({'_Props__guardian_strategy': guardian_strategy})
 
@@ -170,6 +179,14 @@ class Props:
         else:
             middleware = new_middleware + existing_middleware
         return list(reversed(middleware))
+
+    @staticmethod
+    def __get_decorator(existing_decorator, new_decorator):
+        if existing_decorator is None:
+            decorator = existing_decorator
+        else:
+            decorator = new_decorator + existing_decorator
+        return list(reversed(decorator))
 
     @staticmethod
     def from_producer(producer: Callable[[], Actor]) -> 'Props':

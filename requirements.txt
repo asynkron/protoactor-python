@@ -2,3 +2,5 @@ protobuf
 grpclib
 aiohttp
 jinja2
+jaeger-client
+

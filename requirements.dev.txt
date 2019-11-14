@@ -10,6 +10,8 @@ grpclib
 pytest-asyncio
 aiohttp
 jinja2
+jaeger-client
+
 
 # Check tha the MANIFEST.in is correct
 check-manifest

@@ -3,7 +3,7 @@ from queue import Queue
 
 import pytest
 
-from protoactor.actor.actor import RootContext
+from protoactor.actor.actor_context import RootContext
 from protoactor.actor.props import Props
 
 context = RootContext()

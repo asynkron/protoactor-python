@@ -1,6 +1,6 @@
 import asyncio
 
-from protoactor.actor.actor import AbstractContext
+from protoactor.actor.actor_context import AbstractContext
 from protoactor.actor.utils import Stack
 
 

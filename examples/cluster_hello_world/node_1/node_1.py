@@ -5,14 +5,14 @@ from collections import namedtuple
 from datetime import timedelta
 
 from examples.cluster_hello_world.messages.protos_pb2 import DESCRIPTOR, HelloRequest
-from protoactor.actor.actor import RootContext
+from protoactor.actor.actor_context import RootContext
 from protoactor.remote.response import ResponseStatusCode
 from protoactor.remote.serialization import Serialization
-from protoactor.сluster.providers.consul.consul_client import ConsulClientConfiguration
-from protoactor.сluster.providers.consul.consul_provider import ConsulProvider
-from protoactor.сluster.providers.single_remote_instance.single_remote_instance_provider import \
+from protoactor.cluster.providers.consul.consul_client import ConsulClientConfiguration
+from protoactor.cluster.providers.consul.consul_provider import ConsulProvider
+from protoactor.cluster.providers.single_remote_instance.single_remote_instance_provider import \
     SingleRemoteInstanceProvider
-from protoactor.сluster.сluster import Cluster
+from protoactor.cluster.сluster import Cluster
 
 Node1Config = namedtuple('Node1Config', 'server_name consul_url start_consul')
 

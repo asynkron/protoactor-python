@@ -2,15 +2,15 @@ from abc import ABCMeta, abstractmethod
 from datetime import timedelta
 
 from examples.cluster_grain_hello_world.messages.protos_pb2 import HelloRequest, HelloResponse
-from protoactor.actor.actor import Actor, AbstractContext, RootContext, GlobalRootContext
+from protoactor.actor.actor_context import Actor, AbstractContext, RootContext, GlobalRootContext
 from protoactor.actor.cancel_token import CancelToken
 from protoactor.actor.messages import Started, ReceiveTimeout
 from protoactor.actor.props import Props
 from protoactor.remote.remote import Remote
 from protoactor.remote.response import ResponseStatusCode
-from protoactor.сluster.grain_call_options import GrainCallOptions
-from protoactor.сluster.protos_pb2 import GrainRequest, GrainResponse, GrainErrorResponse
-from protoactor.сluster.сluster import Cluster
+from protoactor.cluster.grain_call_options import GrainCallOptions
+from protoactor.cluster.protos_pb2 import GrainRequest, GrainResponse, GrainErrorResponse
+from protoactor.cluster.сluster import Cluster
 
 
 class AbstractHelloGrain(metaclass=ABCMeta):

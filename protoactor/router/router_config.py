@@ -2,7 +2,7 @@ import threading
 from abc import abstractmethod, ABC
 
 from protoactor.actor import PID, ProcessRegistry
-from protoactor.actor.actor import AbstractContext, ActorContext
+from protoactor.actor.actor_context import AbstractContext, ActorContext
 from protoactor.actor.exceptions import ProcessNameExistException
 from protoactor.actor.messages import Started
 from protoactor.actor.props import Props

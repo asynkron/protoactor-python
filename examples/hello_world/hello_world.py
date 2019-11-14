@@ -1,7 +1,7 @@
 import asyncio
 
 from protoactor.actor.props import Props
-from protoactor.actor.actor import Actor, AbstractContext, RootContext
+from protoactor.actor.actor_context import Actor, AbstractContext, RootContext
 
 
 class HelloMessage:

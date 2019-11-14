@@ -1,0 +1,32 @@
+syntax = "proto3";
+package messages;
+import "protoactor/actor/protos.proto";
+
+message Connect
+{
+	actor.PID sender = 1;
+}
+
+message Connected {
+    string message = 1;
+}
+
+message SayRequest {
+    string user_name = 1;
+    string message = 2;
+}
+
+message SayResponse {
+    string user_name = 1;
+    string message = 2;
+}
+
+message NickRequest {
+    string old_user_name = 1;
+    string new_user_name = 2;
+}
+
+message NickResponse {
+    string old_user_name = 1;
+    string new_user_name = 2;
+}
