@@ -7,62 +7,62 @@ from protoactor.actor.actor import Actor
 
 class Persistent():
     def __init__(self):
-        self.__state = None
-        self.__index = None
-        self.__context = None
-        self.__recovering = None
+        self._state = None
+        self._index = None
+        self._context = None
+        self._recovering = None
 
     @property
     def name(self):
-        return self.__context.my_self.id
+        return self._context.my_self.id
 
     @property
     def actor_id(self):
-        return self.__context.self.id
+        return self._context.self.id
 
     async def init(self, provider, context, actor):
-        self.__state = provider.get_state()
-        self.__context = context
-        self.__actor = actor
+        self._state = provider.get_state()
+        self._context = context
+        self._actor = actor
 
-        snapshot, index = await self.__state.get_snapshot()
+        snapshot, index = await self._state.get_snapshot()
         if snapshot is not None:
-            self.__index = index
-            actor.update_state(RecoverSnapshot(snapshot, self.__index))
+            self._index = index
+            actor.update_state(RecoverSnapshot(snapshot, self._index))
 
         def update_actor_state_with_event(e):
-            self.__index += 1
-            actor.update_state(RecoverEvent(e, self.__index))
+            self._index += 1
+            actor.update_state(RecoverEvent(e, self._index))
 
-        await self.__state.get_events(self.actor_id, index, update_actor_state_with_event)
+        await self._state.get_events(self.actor_id, index, update_actor_state_with_event)
 
     async def persist_event_async(self, event):
-        self.__index += 1
-        await self.__state.persist_event(self.actor_id, self.__index, event)
-        self.__actor.update_state(PersistedEvent(event, self.__index))
+        self._index += 1
+        await self._state.persist_event(self.actor_id, self._index, event)
+        self._actor.update_state(PersistedEvent(event, self._index))
 
     async def persist_snapshot(self, snapshot):
-        await self.__state.persist_snapshot(self.actor_id, self.__index, snapshot)
+        await self._state.persist_snapshot(self.actor_id, self._index, snapshot)
 
     async def delete_snapshot(self, inclusive_to_index):
-        await self.__state.delete_snapshot(inclusive_to_index)
+        await self._state.delete_snapshot(inclusive_to_index)
 
     async def delete_events(self, inclusive_to_index):
-        await self.__state.delete_event(inclusive_to_index)
+        await self._state.delete_event(inclusive_to_index)
 
 
 class Snapshot():
     def __init__(self, state, index):
-        self.__state = state
-        self.__index = index
+        self._state = state
+        self._index = index
 
     @property
     def state(self):
-        return self.__state
+        return self._state
 
     @property
     def index(self):
-        return self.__index
+        return self._index
 
 
 class RecoverSnapshot(Snapshot):
@@ -77,16 +77,16 @@ class PersistedSnapshot(Snapshot):
 
 class Event():
     def __init__(self, data, index):
-        self.__data = data
-        self.__index = index
+        self._data = data
+        self._index = index
 
     @property
     def data(self):
-        return self.__data
+        return self._data
 
     @property
     def index(self):
-        return self.__index
+        return self._index
 
 
 class RecoverEvent(Event):
@@ -148,31 +148,31 @@ class InMemoryProvider(Provider):
 
 class InMemoryProviderState(ProviderState):
     def __init__(self) -> None:
-        self.__events = {}
-        self.__snapshots = {}
+        self._events = {}
+        self._snapshots = {}
 
     def get_snapshot_interval(self) -> int:
         return 0
 
     async def get_snapshot(self, actor_name: str) -> Tuple[Any, int]:
-        snapshot = self.__snapshots.get(actor_name, None)
+        snapshot = self._snapshots.get(actor_name, None)
         return snapshot
 
     async def get_events(self, actor_name: str, event_index_start: int, callback: Callable[..., None]) -> None:
-        events = self.__events.get(actor_name, None)
+        events = self._events.get(actor_name, None)
         if events is not None:
             for e in events:
                 callback(e)
 
     async def persist_event(self, actor_name: str, event_index: int, event: Any) -> None:
-        events = self.__events.setdefault(actor_name, [])
+        events = self._events.setdefault(actor_name, [])
         events.append(event)
 
     async def persist_snapshot(self, actor_name: str, event_index: int, snapshot: Any) -> None:
-        self.__snapshots[actor_name] = snapshot, event_index
+        self._snapshots[actor_name] = snapshot, event_index
 
     async def delete_events(self, actor_name: str, inclusive_to_index: int, event: Any) -> None:
-        self.__events.pop(actor_name)
+        self._events.pop(actor_name)
 
     async def delete_snapshots(self, actor_name: str, inclusive_to_index: int, snapshot: Any) -> None:
-        self.__snapshots.pop(actor_name)
+        self._snapshots.pop(actor_name)

@@ -222,12 +222,12 @@ class PartitionActor(Actor):
             owner = Partition.partition_for_kind(address, self._kind)
             await context.send(owner, msg)
         else:
-            self._logger.log_debug('Kind %s Member Left %s' % (self._kind, msg.address))
+            self._logger.log_debug(f'Kind {self._kind} Member Left {msg.address}')
             self._partition[msg.name] = msg.pid
             await context.watch(msg.pid)
 
     async def _member_left(self, msg: MemberLeftEvent, context: AbstractContext):
-        self._logger.log_information('Kind %s Member Left %s' % (self._kind, msg.address))
+        self._logger.log_information(f'Kind {self._kind} Member Left {msg.address}')
 
         if msg.address == ProcessRegistry().address:
             for actor_id, _ in self._partition:
@@ -244,7 +244,7 @@ class PartitionActor(Actor):
                     sp.set_result(ActorPidResponse.Unavailable)
 
     def _member_rejoined(self, msg: MemberRejoinedEvent):
-        self._logger.log_information('Kind %s Member Joined %s' % (self._kind, msg.address))
+        self._logger.log_information(f'Kind {self._kind} Member Joined {msg.address}')
 
         for actor_id, pid in self._partition:
             if pid.address == msg.address:

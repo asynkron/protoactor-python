@@ -435,7 +435,7 @@ class ActorContext(AbstractActorContext):
         if props.guardian_strategy is not None:
             raise ValueError('Props used to spawn child cannot have GuardianStrategy.')
 
-        pid = props.spawn('{0}/{1}'.format(self.my_self, name), self.my_self)
+        pid = props.spawn(f'{self.my_self}/{name}', self.my_self)
         self._ensure_extras().add_child(pid)
         return pid
 
@@ -475,7 +475,7 @@ class ActorContext(AbstractActorContext):
 
     async def forward(self, target: PID) -> None:
         if isinstance(self._message_or_envelope, SystemMessage):
-            self._logger.log_warning('SystemMessage cannot be forwarded. {0}'.format(self._message_or_envelope))
+            self._logger.log_warning(f'SystemMessage cannot be forwarded. {self._message_or_envelope}')
             return
         await self.__send_user_message(target, self._message_or_envelope)
 
@@ -579,15 +579,15 @@ class ActorContext(AbstractActorContext):
                 self._message_or_envelope = message.message
                 return await message.action()
             else:
-                self._logger.warn("Unknown system message {0}".format(message))
+                self._logger.warn(f'Unknown system message {message}')
                 return None
         except Exception as e:
-            self._logger.error("Error handling SystemMessage {0}".format(str(e)))
+            self._logger.error(f'Error handling SystemMessage {str(e)}')
             raise Exception()
 
     async def invoke_user_message(self, message: any) -> None:
         if self._state == ContextState.Stopped:
-            self._logger.error("Actor already stopped, ignore user message {0}".format(str(message)))
+            self._logger.error(f'Actor already stopped, ignore user message {str(message)}')
             return
 
         influence_timeout = True
