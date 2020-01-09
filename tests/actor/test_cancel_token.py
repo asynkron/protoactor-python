@@ -137,7 +137,6 @@ async def test_cancellable_wait_cancels_subtasks_when_cancelled(event_loop):
     await asyncio.sleep(0)
     assert future.cancelled()
     await assert_only_current_task_not_done()
-    asyncio.as_completed
 
 
 @pytest.mark.asyncio

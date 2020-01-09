@@ -39,52 +39,52 @@ class AbstractSupervisor(metaclass=ABCMeta):
 
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
-    def handle_failure(self, supervisor, child: PID, rs_stats: RestartStatistics, reason: Exception):
+    async def handle_failure(self, supervisor, child: PID, rs_stats: RestartStatistics, reason: Exception):
         raise NotImplementedError("Should Implement this method")
 
 
 class AllForOneStrategy(AbstractSupervisorStrategy):
 
     def __init__(self, decider, max_retries_number, within_timedelta):
-        self.__decider = decider
-        self.__max_retries_number = max_retries_number
-        self.__within_timedelta = within_timedelta
-        self.__logger = get_logger('OneForOneStrategy')
+        self._decider = decider
+        self._max_retries_number = max_retries_number
+        self._within_timedelta = within_timedelta
+        self._logger = get_logger('OneForOneStrategy')
 
-    def handle_failure(self, supervisor, child: PID,
+    async def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
                        reason: Exception):
-        directive = self.__decider(child, reason)
+        directive = self._decider(child, reason)
 
         if directive == SupervisorDirective.Resume:
-            supervisor.resume_children(child)
+            await supervisor.resume_children(child)
 
         elif directive == SupervisorDirective.Restart:
             if self.should_stop(rs_stats):
-                print("Stopping {0} reason: {1}".format(child, reason))
-                supervisor.stop_children(*supervisor.children())
+                print(f'Stopping {child} reason: {reason}')
+                await supervisor.stop_children(*supervisor.children())
             else:
-                print("Restarting {0} reason: {1}".format(child, reason))
-                supervisor.restart_children(reason, *supervisor.children())
+                print(f'Restarting {child} reason: {reason}')
+                await supervisor.restart_children(reason, supervisor.children())
 
         elif directive == SupervisorDirective.Stop:
-            print("Stopping {0} reason: {1}".format(child, reason))
-            supervisor.stop_children(child)
+            print(f'Stopping {child} reason: {reason}')
+            await supervisor.stop_children(child)
 
         elif directive == SupervisorDirective.Escalate:
-            supervisor.escalate_failure(child, reason)
+            await supervisor.escalate_failure(child, reason)
 
         else:
             # TODO: raise not handle error
             pass
 
     def should_stop(self, rs_stats: RestartStatistics):
-        if self.__max_retries_number == 0:
+        if self._max_retries_number == 0:
             return True
 
         rs_stats.fail()
 
-        if rs_stats.number_of_failures(self.__within_timedelta) > self.__max_retries_number:
+        if rs_stats.number_of_failures(self._within_timedelta) > self._max_retries_number:
             rs_stats.reset()
             return True
 
@@ -94,44 +94,44 @@ class AllForOneStrategy(AbstractSupervisorStrategy):
 class OneForOneStrategy(AbstractSupervisorStrategy):
 
     def __init__(self, decider, max_retries_number, within_timedelta):
-        self.__decider = decider
-        self.__max_retries_number = max_retries_number
-        self.__within_timedelta = within_timedelta
+        self._decider = decider
+        self._max_retries_number = max_retries_number
+        self._within_timedelta = within_timedelta
 
-    def handle_failure(self, supervisor, child: PID,
+    async def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
                        reason: Exception):
-        directive = self.__decider(child, reason)
+        directive = self._decider(child, reason)
 
         if directive == SupervisorDirective.Resume:
-            supervisor.resume_children(child)
+            await supervisor.resume_children(child)
 
         elif directive == SupervisorDirective.Restart:
             if self.should_stop(rs_stats):
-                print("Restarting {0} reason: {1}".format(child, reason))
-                supervisor.stop_children(child)
+                print(f'Restarting {child} reason: {reason}')
+                await supervisor.stop_children(child)
             else:
-                print("Stopping  {0} reason: {1}".format(child, reason))
-                supervisor.restart_children(reason, child)
+                print(f'Stopping  {child} reason: {reason}')
+                await supervisor.restart_children(reason, child)
 
         elif directive == SupervisorDirective.Stop:
-            print("Stopping {0} reason: {1}".format(child, reason))
-            supervisor.stop_children(child)
+            print(f'Stopping {child} reason: {reason}')
+            await supervisor.stop_children(child)
 
         elif directive == SupervisorDirective.Escalate:
-            supervisor.escalate_failure(child, reason)
+            await supervisor.escalate_failure(child, reason)
 
         else:
             # TODO: raise not handle error
             pass
 
     def should_stop(self, rs_stats: RestartStatistics):
-        if self.__max_retries_number == 0:
+        if self._max_retries_number == 0:
             return True
 
         rs_stats.fail()
 
-        if rs_stats.number_of_failures(self.__within_timedelta) > self.__max_retries_number:
+        if rs_stats.number_of_failures(self._within_timedelta) > self._max_retries_number:
             rs_stats.reset()
             return True
 

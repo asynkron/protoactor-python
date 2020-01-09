@@ -78,7 +78,7 @@ class Remote(metaclass=Singleton):
 
         Dispatchers().default_dispatcher.schedule(self.__run, hostname=hostname, port=port)
 
-        address = "%s:%s" % (hostname, port)
+        address = f'{hostname}:{port}'
         ProcessRegistry().address = address
         self.__spawn_activator()
         # self.__logger.log_debug('Starting Proto.Actor server on %s (%s)' % (bound_address, address))
@@ -96,8 +96,7 @@ class Remote(metaclass=Singleton):
             #                         (ProcessRegistry().address, gracefull))
         except Exception as e:
             self._server.close()
-            self._logger.log_debug('Proto.Actor server stopped on %s. with error:%s' %
-                                   (ProcessRegistry().address, str(e)))
+            self._logger.log_debug(f'Proto.Actor server stopped on {ProcessRegistry().address}. with error: {str(e)}')
 
     def activator_for_address(self, address):
         return PID(address=address, id='activator')
@@ -212,17 +211,17 @@ class EndpointManager(metaclass=Singleton):
 
 class EndpointReader(RemotingBase):
     def __init__(self):
-        self.__suspended = False
+        self._suspended = False
 
     async def Connect(self, stream):
-        if self.__suspended:
+        if self._suspended:
             raise GRPCError(Status.CANCELLED, "Suspended")
         await stream.send_message(ConnectResponse(default_serializer_id=Serialization().default_serializer_id))
 
     async def Receive(self, stream) -> None:
         targets = []
         async for batch in stream:
-            if self.__suspended:
+            if self._suspended:
                 await stream.send_message(Unit())
 
             for i in range(len(batch.target_names)):
@@ -252,7 +251,7 @@ class EndpointReader(RemotingBase):
         await stream.send_message(Unit())
 
     def suspend(self, suspended) -> None:
-        self.__suspended = suspended
+        self._suspended = suspended
 
 
 class EndpointWatcher(Actor):
@@ -407,7 +406,7 @@ class EndpointWriter(Actor):
             batch.type_names.extend(type_name_list)
             batch.envelopes.extend(envelopes)
 
-            await self.__send_envelopes_async(batch, context)
+            await self.__send_envelopes_async(batch, type_name)
 
     async def __started_async(self):
         # self.__logger.log_debug("Connecting to address {_address}")
@@ -435,7 +434,7 @@ class EndpointWriter(Actor):
     async def __send_envelopes_async(self, batch, context):
         try:
             await self._client.Receive([batch])
-        except StreamTerminatedError:
+        except ConnectionRefusedError:
             await GlobalEventStream.publish(EndpointTerminatedEvent(self._address))
 
 
@@ -444,10 +443,12 @@ class EndpointWriterMailbox(AbstractMailbox):
         self._batch_size = batch_size
         self._system_messages = UnboundedMailboxQueue()
         self._user_messages = UnboundedMailboxQueue()
+        self._suspended = False
         self._dispatcher = None
         self._invoker = None
         self._event = threading.Event()
-        self._suspended = False
+        self._async_event = None
+        self._loop = None
 
     def post_user_message(self, msg):
         self._user_messages.push(msg)
@@ -461,28 +462,31 @@ class EndpointWriterMailbox(AbstractMailbox):
         self._invoker = invoker
         self._dispatcher = dispatcher
         self._dispatcher.schedule(self.__run)
+        self._event.wait()
 
     def start(self):
         pass
 
+    def __initialize(self):
+        self._loop = asyncio.get_event_loop()
+        self._async_event = asyncio.Event()
+        self._event.set()
+
     async def __run(self):
+        self.__initialize()
         while True:
-            self._event.wait()
+            await self._async_event.wait()
             await self.__process_messages()
-            self._event.clear()
+            self._async_event.clear()
 
             if self._system_messages.has_messages() or self._user_messages.has_messages():
                 self.__schedule()
-
-    def __schedule(self):
-        self._event.set()
 
     async def __process_messages(self):
         message = None
         try:
             batch = []
-            sys = self._system_messages.pop()
-            if sys is not None:
+            if sys := self._system_messages.pop():
                 if isinstance(sys, SuspendMailbox):
                     self._suspended = True
                 elif isinstance(sys, ResumeMailbox):
@@ -494,23 +498,24 @@ class EndpointWriterMailbox(AbstractMailbox):
             if not self._suspended:
                 batch.clear()
 
-                while True:
-                    msg = self._user_messages.pop()
-                    if msg is not None or self._batch_size <= len(batch):
-                        batch.append(msg)
-                    else:
-                        break
+            while msg := self._user_messages.pop():
+                batch.append(msg)
+                if len(batch) >= self._batch_size:
+                    break
 
-                if len(batch) > 0:
-                    message = batch
-                    await self._invoker.invoke_user_message(batch)
+            if len(batch) > 0:
+                message = batch
+                await self._invoker.invoke_user_message(batch)
         except Exception as e:
             await self._invoker.escalate_failure(e, message)
 
+    def __schedule(self):
+        self._loop.call_soon_threadsafe(lambda: self._async_event.set())
+
 
 class EndpointSupervisor(Actor, AbstractSupervisorStrategy):
-    def handle_failure(self, supervisor: AbstractSupervisor, child: PID, rs: RestartStatistics, cause: Exception):
-        supervisor.restart_children(cause, child)
+    async def handle_failure(self, supervisor: AbstractSupervisor, child: PID, rs: RestartStatistics, cause: Exception):
+        await supervisor.restart_children(cause, child)
 
     async def receive(self, context: AbstractContext) -> None:
         message = context.message
@@ -526,10 +531,11 @@ class EndpointSupervisor(Actor, AbstractSupervisorStrategy):
         return watcher
 
     def __spawn_writer(self, address: str, context: AbstractContext) -> PID:
-        writer_props = Props.from_producer(lambda: EndpointWriter(address,
-                                                                  Remote().remote_config.channel_options,
-                                                                  Remote().remote_config.call_options,
-                                                                  Remote().remote_config.channel_credentials))
+        writer_props = Props.from_producer(lambda: EndpointWriter(
+            address,
+            Remote().remote_config.channel_options,
+            Remote().remote_config.call_options,
+            Remote().remote_config.channel_credentials))
 
         writer_props = writer_props.with_mailbox(lambda: EndpointWriterMailbox(Remote()
                                                                                .remote_config

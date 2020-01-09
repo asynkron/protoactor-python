@@ -2,12 +2,11 @@ sudo: false
 
 language: python
 python:
-  - 3.6
+  - 3.8
 
 env:
   - TOX_ENV=py3
   - TOX_ENV=docs
-  - TOX_ENV=flake8
 
 install:
   - "pip3 install tox"

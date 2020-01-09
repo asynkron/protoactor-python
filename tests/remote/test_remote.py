@@ -151,12 +151,11 @@ async def test_when_remote_terminated_local_watcher_receives_notification(remote
     process.wait()
 
     await root_context.send(local_actor, SendMessageToRemoteActor(remote_actor))
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(1)
 
     async def func1():
         return await root_context.request_future(local_actor,
-                                                 TerminatedMessageReceived(address,
-                                                                          remote_actor.id),
+                                                 TerminatedMessageReceived(address, remote_actor.id),
                                                  timeout=timedelta(seconds=5))
 
     assert await poll_until_true(func1)

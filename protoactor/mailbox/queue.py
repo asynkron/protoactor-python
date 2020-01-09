@@ -19,16 +19,16 @@ class AbstractQueue(metaclass=ABCMeta):
 
 class UnboundedMailboxQueue(AbstractQueue):
     def __init__(self):
-        self.__messages = queue.Queue()
+        self._messages = queue.Queue()
 
     def pop(self) -> Optional[object]:
         try:
-            return self.__messages.get_nowait()
+            return self._messages.get_nowait()
         except queue.Empty:
             return None
 
     def push(self, message: object):
-        self.__messages.put_nowait(message)
+        self._messages.put_nowait(message)
 
     def has_messages(self) -> bool:
-        return not self.__messages.empty()
+        return not self._messages.empty()

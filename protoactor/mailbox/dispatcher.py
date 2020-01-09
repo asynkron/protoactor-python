@@ -1,8 +1,9 @@
 import asyncio
 import threading
-from typing import Callable
-from threading import Thread
 from abc import ABCMeta, abstractmethod
+from threading import Thread
+from typing import Callable
+
 from protoactor.actor.utils import Singleton
 
 
@@ -41,28 +42,41 @@ class Dispatchers(metaclass=Singleton):
         return SynchronousDispatcher()
 
 
-class ThreadDispatcher(AbstractDispatcher):
-    def __init__(self, async_loop=None):
-        self.async_loop = async_loop
+# class ThreadDispatcher(AbstractDispatcher):
+#     def __init__(self, async_loop=None):
+#         self.async_loop = async_loop
+#
+#     @property
+#     def throughput(self) -> int:
+#         return 300
+#
+#     def schedule(self, runner: Callable[..., asyncio.coroutine], **kwargs: ...):
+#         t = Thread(target=self.__run_async, daemon=True, args=(runner, self.async_loop), kwargs=kwargs)
+#         t.start()
+#
+#     def __run_async(self, runner, async_loop, **kwargs):
+#         async_loop_absent = async_loop is None
+#         try:
+#             if async_loop_absent:
+#                 async_loop = asyncio.new_event_loop()
+#                 asyncio.set_event_loop(async_loop)
+#             async_loop.run_until_complete(runner(**kwargs))
+#         finally:
+#             if async_loop_absent:
+#                 async_loop.close()
 
+
+class ThreadDispatcher(AbstractDispatcher):
     @property
     def throughput(self) -> int:
         return 300
 
     def schedule(self, runner: Callable[..., asyncio.coroutine], **kwargs: ...):
-        t = Thread(target=self.__run_async, daemon=True, args=(runner, self.async_loop), kwargs=kwargs)
+        t = Thread(target=self.__start_background_loop, args=(runner,), kwargs=kwargs, daemon=True)
         t.start()
 
-    def __run_async(self, runner, async_loop, **kwargs):
-        async_loop_absent = async_loop is None
-        try:
-            if async_loop_absent:
-                async_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(async_loop)
-            async_loop.run_until_complete(runner(**kwargs))
-        finally:
-            if async_loop_absent:
-                async_loop.close()
+    def __start_background_loop(self, runner, **kwargs):
+        asyncio.run(runner(**kwargs))
 
 
 class SynchronousDispatcher(AbstractDispatcher):

@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import CancelledError
 from typing import Any, Awaitable, Sequence, TypeVar, cast, Union
 
 from protoactor.actor.exceptions import OperationCancelled, EventLoopMismatch
@@ -45,8 +46,7 @@ class CancelToken:
 
     def raise_if_triggered(self) -> None:
         if self.triggered:
-            raise OperationCancelled(
-                "Cancellation requested by {} token".format(self.triggered_token))
+            raise OperationCancelled(f'Cancellation requested by {self.triggered_token} token')
 
     async def wait(self) -> None:
         if self.triggered_token is not None:
@@ -79,7 +79,7 @@ class CancelToken:
                 return_when=asyncio.FIRST_COMPLETED,
                 loop=self.loop,
             )
-        except asyncio.futures.CancelledError:
+        except CancelledError:
             for future in futures:
                 future.cancel()
             raise
@@ -91,11 +91,11 @@ class CancelToken:
         if self.triggered_token is not None:
             for task in done:
                 task.exception()
-            raise OperationCancelled("Cancellation requested by {} token".format(self.triggered_token))
+            raise OperationCancelled(f'Cancellation requested by {self.triggered_token} token')
         return done.pop().result()
 
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
-        return '<CancelToken: {0}>'.format(self.name)
+        return f'CancelToken: {self.name}'

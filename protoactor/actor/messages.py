@@ -88,18 +88,18 @@ class ResumeMailbox(SystemMessage):
 
 class DeadLetterEvent:
     def __init__(self, pid: 'PID', message: object, sender: Optional['PID']) -> None:
-        self.__pid = pid
-        self.__message = message
-        self.__sender = sender
+        self._pid = pid
+        self._message = message
+        self._sender = sender
 
     @property
     def pid(self) -> 'PID':
-        return self.__pid
+        return self._pid
 
     @property
     def message(self) -> object:
-        return self.__message
+        return self._message
 
     @property
     def sender(self) -> Optional['PID']:
-        return self.__sender
+        return self._sender

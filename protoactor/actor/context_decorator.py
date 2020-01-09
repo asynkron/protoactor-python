@@ -15,6 +15,7 @@ is_import = False
 if is_import:
     from protoactor.actor.actor import Actor
 
+
 class RootContextDecorator(AbstractRootContext):
     def __init__(self, context: AbstractRootContext):
         self._context = context

@@ -1,4 +1,3 @@
-
 from abc import abstractmethod
 
 from protoactor.actor.actor_context import AbstractContext

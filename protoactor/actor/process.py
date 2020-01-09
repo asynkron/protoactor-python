@@ -32,26 +32,26 @@ class AbstractProcess:
 
 class ActorProcess(AbstractProcess):
     def __init__(self, mailbox: 'AbstractMailbox') -> None:
-        self.__mailbox = mailbox
-        self.__is_dead = False
+        self._mailbox = mailbox
+        self._is_dead = False
 
     @property
     def mailbox(self) -> 'AbstractMailbox':
-        return self.__mailbox
+        return self._mailbox
 
     def setis_dead(self, value):
-        self.__is_dead = value
+        self._is_dead = value
 
     def getis_dead(self):
-        return self.__is_dead
+        return self._is_dead
 
     is_dead = property(getis_dead, setis_dead)
 
     async def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None):
-        self.__mailbox.post_user_message(message)
+        self._mailbox.post_user_message(message)
 
     async def send_system_message(self, pid: 'PID', message: object):
-        self.__mailbox.post_system_message(message)
+        self._mailbox.post_system_message(message)
 
     async def stop(self, pid: 'PID') -> None:
         await super(ActorProcess, self).stop(pid)
@@ -81,8 +81,7 @@ class FutureProcess(AbstractProcess):
         if self._cancellation_token is not None and self._cancellation_token.triggered:
             await self.stop(self.pid)
         else:
-            future = asyncio.run_coroutine_threadsafe(self.__set_result(msg), self._loop)
-            future.result()
+            await self.__set_result(msg, self._loop)
             await self.stop(self.pid)
 
     async def send_system_message(self, pid: 'PID', message: object) -> None:
@@ -90,11 +89,15 @@ class FutureProcess(AbstractProcess):
             ProcessRegistry().remove(pid)
         else:
             if self._cancellation_token is None or not self._cancellation_token.triggered:
-                self._future.set_result(None)
+                await self.__set_result(None, self._loop)
             await self.stop(pid)
 
-    async def __set_result(self, msg):
+    async def __upgrade_state(self, msg):
         self._future.set_result(msg)
+
+    async def __set_result(self, message, loop):
+        concurrent = asyncio.run_coroutine_threadsafe(self.__upgrade_state(message), loop=loop)
+        return asyncio.wrap_future(concurrent)
 
 
 class DeadLettersProcess(AbstractProcess, metaclass=Singleton):
@@ -107,18 +110,18 @@ class DeadLettersProcess(AbstractProcess, metaclass=Singleton):
 
 class GuardianProcess(AbstractProcess, AbstractSupervisor):
     def __init__(self, strategy: AbstractSupervisorStrategy):
-        self.__supervisor_strategy = strategy
-        self.__name = "Guardian%s" % ProcessRegistry().next_id()
-        self.__pid, absent = ProcessRegistry().try_add(self.__name, self)
+        self._supervisor_strategy = strategy
+        self._name = "Guardian%s" % ProcessRegistry().next_id()
+        self._pid, absent = ProcessRegistry().try_add(self._name, self)
         if not absent:
-            raise ProcessNameExistException(self.__name, self.__pid)
+            raise ProcessNameExistException(self._name, self._pid)
 
     async def send_user_message(self, pid: 'PID', message: object, sender: 'PID' = None) -> None:
         raise ValueError('Guardian actor cannot receive any user messages.')
 
     async def send_system_message(self, pid: 'PID', message: object) -> None:
         if isinstance(message, Failure):
-            self.__supervisor_strategy.handle_failure(self, message.who, message.restart_statistics, message.reason)
+            self._supervisor_strategy.handle_failure(self, message.who, message.restart_statistics, message.reason)
 
     def escalate_failure(self, who: 'PID', reason: Exception) -> None:
         raise ValueError('Guardian cannot escalate failure.')
