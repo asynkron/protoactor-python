@@ -436,6 +436,7 @@ class ActorContext(AbstractActorContext):
             raise ValueError('Props used to spawn child cannot have GuardianStrategy.')
 
         pid = props.spawn(f'{self.my_self}/{name}', self.my_self)
+
         self._ensure_extras().add_child(pid)
         return pid
 
@@ -476,6 +477,7 @@ class ActorContext(AbstractActorContext):
     async def forward(self, target: PID) -> None:
         if isinstance(self._message_or_envelope, SystemMessage):
             self._logger.log_warning(f'SystemMessage cannot be forwarded. {self._message_or_envelope}')
+            
             return
         await self.__send_user_message(target, self._message_or_envelope)
 
