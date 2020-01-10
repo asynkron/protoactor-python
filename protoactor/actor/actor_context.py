@@ -54,7 +54,7 @@ class AbstractSenderContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def request(self, target: PID, message: any):
+    async def request(self, target: PID, message: any, sender: PID = None):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -376,8 +376,6 @@ class ActorContext(AbstractActorContext):
         self._logger = get_logger('ActorContext')
         self._receive_timeout = timedelta()
 
-        self.__incarnate_actor()
-
     @property
     def parent(self) -> PID:
         return self._parent
@@ -558,6 +556,7 @@ class ActorContext(AbstractActorContext):
     async def invoke_system_message(self, message: any) -> None:
         try:
             if isinstance(message, messages.Started):
+                self.__incarnate_actor()
                 return await self.invoke_user_message(message)
             elif isinstance(message, Stop):
                 await self.__initiate_stop()

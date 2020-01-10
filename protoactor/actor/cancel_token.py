@@ -48,13 +48,16 @@ class CancelToken:
         if self.triggered:
             raise OperationCancelled(f'Cancellation requested by {self.triggered_token} token')
 
-    async def wait(self) -> None:
+    async def wait(self, timeout: float = None) -> None:
         if self.triggered_token is not None:
             return
 
         futures = [asyncio.ensure_future(self._triggered.wait(), loop=self.loop)]
         for token in self._chain:
             futures.append(asyncio.ensure_future(token.wait(), loop=self.loop))
+
+        if timeout is not None:
+            futures.append(asyncio.ensure_future(asyncio.sleep(timeout), loop=self.loop))
 
         def cancel_not_done(fut: 'asyncio.Future[None]') -> None:
             for future in futures:
