@@ -1,6 +1,7 @@
 import asyncio
+import logging
 import threading
-from typing import Dict
+from typing import Dict, Any
 
 from grpclib.client import Channel
 from grpclib.const import Status
@@ -8,7 +9,7 @@ from grpclib.exceptions import GRPCError, StreamTerminatedError
 from grpclib.server import Server
 
 import protoactor.actor.message_envelope as proto
-from protoactor.actor import actor_context
+from protoactor.actor import actor_context, log
 from protoactor.actor.actor import Actor
 from protoactor.actor.actor_context import ProcessRegistry, GlobalRootContext, AbstractContext
 from protoactor.actor.behavior import Behavior
@@ -47,7 +48,7 @@ class RemoteConfig():
 
 class Remote(metaclass=Singleton):
     def __init__(self):
-        self._logger = None
+        self._logger = log.create_logger(logging.INFO, context=Remote)
         self._server = None
         self._kinds = {}
         self._remote_config = None
@@ -81,7 +82,7 @@ class Remote(metaclass=Singleton):
         address = f'{hostname}:{port}'
         ProcessRegistry().address = address
         self.__spawn_activator()
-        # self.__logger.log_debug('Starting Proto.Actor server on %s (%s)' % (bound_address, address))
+        self._logger.debug(f'Starting Proto.Actor server on {address}')
 
     def shutdown(self, gracefull=True):
         try:
@@ -92,11 +93,10 @@ class Remote(metaclass=Singleton):
                 self._server.close()
             else:
                 self._server.close()
-            # self.__logger.log_debug('Proto.Actor server stopped on %s. Graceful:%s' %
-            #                         (ProcessRegistry().address, gracefull))
+            self._logger.debug(f'Proto.Actor server stopped on {ProcessRegistry().address}. Graceful: {gracefull}')
         except Exception as e:
             self._server.close()
-            self._logger.log_debug(f'Proto.Actor server stopped on {ProcessRegistry().address}. with error: {str(e)}')
+            self._logger.exception(f'Proto.Actor server stopped on {ProcessRegistry().address}')
 
     def activator_for_address(self, address):
         return PID(address=address, id='activator')
@@ -149,14 +149,15 @@ class RemoteProcess(AbstractProcess):
 
 class EndpointManager(metaclass=Singleton):
     def __init__(self):
-        self._logger = None
+        self._logger = log.create_logger(logging.DEBUG, prefix='EndpointManager')
         self._connections = {}
         self._endpoint_supervisor = None
         self._endpoint_term_evn_sub = None
         self._endpoint_conn_evn_sub = None
 
     def start(self) -> None:
-        # self.__logger.log_debug('Started EndpointManager')
+        self._logger.debug('Started EndpointManager')
+
         props = Props().from_producer(EndpointSupervisor) \
             .with_guardian_supervisor_strategy(Supervision.always_restart_strategy)
 
@@ -172,7 +173,7 @@ class EndpointManager(metaclass=Singleton):
         self._connections.clear()
 
         self._endpoint_supervisor.stop()
-        # self.__logger.log_debug('Stopped EndpointManager')
+        self._logger.debug('Stopped EndpointManager')
 
     async def remote_watch(self, msg: RemoteWatch) -> None:
         endpoint = await self.__ensure_connected(msg.watchee.address)
@@ -258,7 +259,7 @@ class EndpointWatcher(Actor):
     def __init__(self, address):
         self._address = address
         self._behavior = Behavior(self.connected)
-        self._logger = None
+        self._logger = log.create_logger(logging.INFO, context=EndpointWatcher)
         self._watched = {}
 
     async def receive(self, context: AbstractContext) -> None:
@@ -294,7 +295,7 @@ class EndpointWatcher(Actor):
         await msg.watcher.send_system_message(Terminated(who=msg.watchee))
 
     async def __process_endpoint_terminated_event_message_in_connected_state(self, context, msg):
-        # self.__logger.log_debug()
+        self._logger.debug(f'Handle terminated address {self._address}')
         for watched_id, pid_set in self._watched.items():
             watcher_pid = PID(address=ProcessRegistry().address, id=watched_id)
             watcher_ref = ProcessRegistry().get(watcher_pid)
@@ -325,13 +326,13 @@ class EndpointWatcher(Actor):
         await Remote().send_message(msg.watchee, Watch(watcher=msg.watcher), -1)
 
     def __process_stopped_message_in_connected_state(self):
-        self._logger.log_debug("")
+        self._logger.debug(f'Stopped EndpointWatcher at {self._address}')
 
     async def __process_remote_watch_message_in_terminated_state(self, msg):
         await msg.watcher.send_system_message(Terminated(address_terminated=True, who=msg.watchee))
 
     def __process_endpoint_connected_event_message_in_terminated_state(self):
-        self._logger.log_debug("")
+        self._logger.debug(f'Handle restart address {self._address}')
         self._behavior.become(self.connected)
 
 
@@ -339,7 +340,7 @@ class EndpointWriter(Actor):
     def __init__(self, address: str, channel_options: Dict[str, str], call_options,
                  channel_credentials):
         self._serializer_id = None
-        self._logger = None
+        self._logger = log.create_logger(logging.INFO, context=EndpointWriter)
         self._client = None
         self._channel = None
         self._address = address
@@ -355,6 +356,7 @@ class EndpointWriter(Actor):
             await self.__started_async()
         elif isinstance(message, Stopped):
             await self.__stopped_async()
+            self._logger.debug(f'Stopped EndpointWriter at {self._address}')
         elif isinstance(message, Restarting):
             await self.__restarting_async()
         elif isinstance(message, EndpointTerminatedEvent):
@@ -409,7 +411,7 @@ class EndpointWriter(Actor):
             await self.__send_envelopes_async(batch, type_name)
 
     async def __started_async(self):
-        # self.__logger.log_debug("Connecting to address {_address}")
+        self._logger.debug(f'Connecting to address {self._address}')
         host, port = self._address.split(':')
         try:
             self._channel = Channel(host=host, port=port, loop=asyncio.get_event_loop())
@@ -417,16 +419,15 @@ class EndpointWriter(Actor):
             res = await self._client.Connect(ConnectRequest())
             self._serializer_id = res.default_serializer_id
         except Exception:
-            # self.__logger.log_error("GRPC Failed to connect to address {_address}\n{ex}")
-            await asyncio.sleep(2000)
+            self._logger.exception(f'GRPC Failed to connect to address {self._address}')
+            await asyncio.sleep(2)
             raise Exception()
 
         await GlobalEventStream.publish(EndpointConnectedEvent(self._address))
-        # self.__logger.log_debug("")
+        self._logger.debug(f'Connected to address {self._address}')
 
     async def __stopped_async(self):
         self._channel.close()
-        self._logger.log_debug("")
 
     async def __restarting_async(self):
         self._channel.close()
@@ -436,6 +437,7 @@ class EndpointWriter(Actor):
             await self._client.Receive([batch])
         except ConnectionRefusedError:
             await GlobalEventStream.publish(EndpointTerminatedEvent(self._address))
+            self._logger.exception(f'gRPC Failed to send to address {self._address}')
 
 
 class EndpointWriterMailbox(AbstractMailbox):
@@ -449,6 +451,7 @@ class EndpointWriterMailbox(AbstractMailbox):
         self._event = threading.Event()
         self._async_event = None
         self._loop = None
+        self._logger = log.create_logger(logging.INFO, context=EndpointWriterMailbox)
 
     def post_user_message(self, msg):
         self._user_messages.push(msg)
@@ -507,6 +510,7 @@ class EndpointWriterMailbox(AbstractMailbox):
                 message = batch
                 await self._invoker.invoke_user_message(batch)
         except Exception as e:
+            self._logger.exception(f'Exception in Run')
             await self._invoker.escalate_failure(e, message)
 
     def __schedule(self):
@@ -514,7 +518,8 @@ class EndpointWriterMailbox(AbstractMailbox):
 
 
 class EndpointSupervisor(Actor, AbstractSupervisorStrategy):
-    async def handle_failure(self, supervisor: AbstractSupervisor, child: PID, rs: RestartStatistics, cause: Exception):
+    async def handle_failure(self, supervisor: AbstractSupervisor, child: PID, rs: RestartStatistics, cause: Exception,
+                             message:Any):
         await supervisor.restart_children(cause, child)
 
     async def receive(self, context: AbstractContext) -> None:

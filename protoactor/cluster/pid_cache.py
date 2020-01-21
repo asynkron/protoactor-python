@@ -1,5 +1,7 @@
+import logging
 from typing import Tuple
 
+from protoactor.actor import log
 from protoactor.actor.actor_context import Actor, AbstractContext, GlobalRootContext
 from protoactor.actor.event_stream import GlobalEventStream
 from protoactor.actor.messages import Started
@@ -31,17 +33,16 @@ class PidCache(metaclass=Singleton):
         GlobalEventStream.unsubscribe(self._cluster_topology_evn_sub.id)
 
     def process_member_status_event(self, evn: AbstractMemberStatusEvent) -> None:
-        if isinstance(evn, MemberLeftEvent) or isinstance(evn, MemberRejoinedEvent):
+        if isinstance(evn, (MemberLeftEvent, MemberRejoinedEvent)):
             self.remove_cache_by_member_address(evn.address)
 
     def get_cache(self, name: str) -> Tuple[PID, bool]:
-        if name in self._cache.keys():
+        if name in self._cache:
             return self._cache[name], True
-        else:
-            return None, False
+        return None, False
 
     async def add_cache(self, name: str, pid: PID) -> bool:
-        if name not in self._cache.keys():
+        if name not in self._cache:
             key = pid.to_short_string()
             self._cache[name] = pid
             self._reverse_cache[key] = name
@@ -73,13 +74,12 @@ class PidCache(metaclass=Singleton):
 
 class PidCacheWatcher(Actor):
     def __init__(self):
-        self._logger = None
+        self._logger = log.create_logger(logging.INFO, context=PidCacheWatcher)
 
     async def receive(self, context: AbstractContext) -> None:
         msg = context.message
         if isinstance(msg, Started):
-            # self._logger.log_debug('Started PidCacheWatcher')
-            pass
+            self._logger.debug('Started PidCacheWatcher')
         elif isinstance(msg, WatchPidRequest):
             await context.watch(msg.pid)
         elif isinstance(msg, Terminated):

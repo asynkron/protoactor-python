@@ -44,7 +44,8 @@ async def test_oneforone_handle_failure_resume_directive(supervisor_data):
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].resume_children \
         .assert_called_once_with(supervisor_data['pid_child'])
@@ -62,7 +63,8 @@ async def test_oneforone_handle_failure_restart_directive_can_restart(supervisor
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].restart_children \
         .assert_called_once_with(exc, supervisor_data['pid_child'])
@@ -82,7 +84,8 @@ async def test_oneforone_handle_failure_restart_directive_cant_restart(superviso
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].stop_children \
         .assert_called_once_with(supervisor_data['pid_child'])
@@ -100,7 +103,8 @@ async def test_oneforone_handle_failure_stop_directive(supervisor_data):
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].stop_children \
         .assert_called_once_with(supervisor_data['pid_child'])
@@ -118,10 +122,11 @@ async def test_oneforone_handle_failure_escalate_directive(supervisor_data):
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].escalate_failure \
-        .assert_called_once_with(supervisor_data['pid_child'], exc)
+        .assert_called_once_with(exc, None)
 
 
 @pytest.mark.asyncio
@@ -136,7 +141,8 @@ async def test_allforone_handle_failure_resume_directive(supervisor_data):
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].resume_children \
         .assert_called_once_with(supervisor_data['pid_child'])
@@ -163,7 +169,8 @@ async def test_allforone_handle_failure_restart_directive_can_restart(supervisor
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].restart_children \
         .assert_called_once_with(exc, children_pids)
@@ -192,7 +199,8 @@ async def test_allforone_handle_failure_restart_directive_cant_restart(superviso
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].stop_children \
         .assert_called_once_with(*children_pids)
@@ -210,7 +218,8 @@ async def test_allforone_handle_failure_stop_directive(supervisor_data):
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].stop_children \
         .assert_called_once_with(supervisor_data['pid_child'])
@@ -228,7 +237,8 @@ async def test_allforone_handle_failure_escalate_directive(supervisor_data):
     await one_for_one.handle_failure(supervisor_data['supervisor'],
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
-                                     exc)
+                                     exc,
+                                     None)
 
     supervisor_data['supervisor'].escalate_failure \
-        .assert_called_once_with(supervisor_data['pid_child'], exc)
+        .assert_called_once_with(exc, None)
