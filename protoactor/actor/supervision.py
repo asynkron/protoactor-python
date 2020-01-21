@@ -51,7 +51,6 @@ class AbstractSupervisorStrategy(metaclass=ABCMeta):
 
 
 class AllForOneStrategy(AbstractSupervisorStrategy):
-
     def __init__(self, decider: Decider, max_retries_number: int, within_timedelta: Optional[timedelta]):
         self._decider = decider
         self._max_retries_number = max_retries_number
@@ -93,12 +92,10 @@ class AllForOneStrategy(AbstractSupervisorStrategy):
         if rs.number_of_failures(self._within_timedelta) > self._max_retries_number:
             rs.reset()
             return True
-
         return False
 
 
 class OneForOneStrategy(AbstractSupervisorStrategy):
-
     def __init__(self, decider: Decider, max_retries_number: int, within_timedelta: Optional[timedelta]):
         self._decider = decider
         self._max_retries_number = max_retries_number
@@ -138,7 +135,6 @@ class OneForOneStrategy(AbstractSupervisorStrategy):
         if rs.number_of_failures(self._within_timedelta) > self._max_retries_number:
             rs.reset()
             return True
-
         return False
 
 

@@ -219,7 +219,7 @@ async def test_allforone_handle_failure_stop_directive(supervisor_data):
                                      supervisor_data['pid_child'],
                                      supervisor_data['restart_statistic'],
                                      exc,
-                                     None)
+                                     None) 
 
     supervisor_data['supervisor'].stop_children \
         .assert_called_once_with(supervisor_data['pid_child'])
@@ -242,3 +242,4 @@ async def test_allforone_handle_failure_escalate_directive(supervisor_data):
 
     supervisor_data['supervisor'].escalate_failure \
         .assert_called_once_with(exc, None)
+
