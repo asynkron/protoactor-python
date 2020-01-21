@@ -1,7 +1,8 @@
+import logging
 from typing import Callable, Any
 from uuid import uuid4
 
-from protoactor.actor.log import get_logger
+from protoactor.actor import log
 from protoactor.actor.messages import DeadLetterEvent
 
 from protoactor.mailbox.dispatcher import Dispatchers, AbstractDispatcher
@@ -33,8 +34,8 @@ class Subscription():
 class EventStream():
     def __init__(self):
         self._subscriptions = {}
-        self._logger = get_logger('EventStream')
-        self.subscribe(self.__report_deadletters, DeadLetterEvent)
+        self._logger = log.create_logger(logging.INFO, context=EventStream)
+        self.subscribe(self.__process_dead_letters, DeadLetterEvent)
 
     def subscribe(self, fun: Callable[..., Any], msg_type: type = None,
                   dispatcher: AbstractDispatcher = Dispatchers().synchronous_dispatcher) -> Subscription:
@@ -53,19 +54,14 @@ class EventStream():
             try:
                 await sub.action(message)
             except Exception:
-                self._logger.log_warning('Exception has occurred when publishing a message.')
+                self._logger.exception('Exception has occurred when publishing a message.')
 
     def unsubscribe(self, uniq_id):
         del self._subscriptions[uniq_id]
 
-    async def __report_deadletters(self, message: DeadLetterEvent) -> None:
-        console_message = """[DeadLetterEvent] %(pid)s got %(message_type)s:%(message)s from
-        %(sender)s""" % {"pid": message.pid,
-                         "message_type": type(message.message),
-                         "message": message.message,
-                         "sender": message.sender
-                         }
-        self._logger.info(console_message)
+    async def __process_dead_letters(self, message: DeadLetterEvent) -> None:
+        self._logger.info(f'[DeadLetter] {message.pid.to_short_string()} got {type(message.message)}:{message.message} '
+                          f'from {message.sender}')
 
 
 GlobalEventStream = EventStream()

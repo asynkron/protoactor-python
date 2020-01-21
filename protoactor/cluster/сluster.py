@@ -1,9 +1,10 @@
 import asyncio
+import logging
 from datetime import timedelta
 from threading import RLock
 from typing import Callable, Tuple, List, Optional
 
-from protoactor.actor import ProcessRegistry, PID
+from protoactor.actor import ProcessRegistry, PID, log
 from protoactor.actor.actor_context import GlobalRootContext, Actor, AbstractContext
 from protoactor.actor.cancel_token import CancelToken
 from protoactor.actor.event_stream import GlobalEventStream
@@ -28,7 +29,6 @@ from protoactor.cluster.providers.abstract_cluster_provider import AbstractClust
 
 class MemberList():
     def __init__(self):
-        self._logger = None
         self._lock = RLock()
         self._members = {}
         self._member_strategy_by_kind = {}
@@ -187,7 +187,7 @@ class Partition():
 class PartitionActor(Actor):
     def __init__(self, kind: str):
         self._kind = kind
-        self._logger = None
+        self._logger = log.create_logger(logging.INFO, context=PartitionActor)
 
         self._partition = {}
         self._reverse_partition = {}
@@ -196,8 +196,7 @@ class PartitionActor(Actor):
     async def receive(self, context: AbstractContext):
         msg = context.message
         if isinstance(msg, Started):
-            # self._logger.log_debug('Started PartitionActor ' + self._kind)
-            pass
+            self._logger.debug(f'Started PartitionActor {self._kind}')
         elif isinstance(msg, ActorPidRequest):
             await self._spawn(msg, context)
         elif isinstance(msg, Terminated):
@@ -222,12 +221,12 @@ class PartitionActor(Actor):
             owner = Partition.partition_for_kind(address, self._kind)
             await context.send(owner, msg)
         else:
-            self._logger.log_debug(f'Kind {self._kind} Member Left {msg.address}')
+            self._logger.debug(f'Kind {self._kind} Take Ownership name: {msg.name}, pid: {msg.pid}')
             self._partition[msg.name] = msg.pid
             await context.watch(msg.pid)
 
     async def _member_left(self, msg: MemberLeftEvent, context: AbstractContext):
-        self._logger.log_information(f'Kind {self._kind} Member Left {msg.address}')
+        self._logger.info(f'Kind {self._kind} Member Left {msg.address}')
 
         if msg.address == ProcessRegistry().address:
             for actor_id, _ in self._partition:
@@ -244,7 +243,7 @@ class PartitionActor(Actor):
                     sp.set_result(ActorPidResponse.Unavailable)
 
     def _member_rejoined(self, msg: MemberRejoinedEvent):
-        self._logger.log_information(f'Kind {self._kind} Member Joined {msg.address}')
+        self._logger.info(f'Kind {self._kind} Member Rejoined {msg.address}')
 
         for actor_id, pid in self._partition:
             if pid.address == msg.address:
@@ -255,7 +254,7 @@ class PartitionActor(Actor):
                 sp.set_result(ActorPidResponse.Unavailable)
 
     async def _member_joined(self, msg: MemberJoinedEvent, context: AbstractContext):
-        # self._logger.log_information('Kind %s Member Joined %s' % (self._kind, msg.address))
+        self._logger.info(f'Kind {self._kind} Member Joined {msg.address}')
 
         for actor_id, _ in self._partition:
             address = MemberList.get_partition(actor_id, self._kind)
@@ -298,7 +297,7 @@ class PartitionActor(Actor):
         activator = MemberList.get_activator(msg.kind)
         if not activator:
             # No activator currently available, return unavailable
-            self._logger.log_debug('No members currently available')
+            self._logger.debug('No members currently available')
             await context.respond(ActorPidResponse.Unavailable)
             return
 
@@ -328,18 +327,15 @@ class PartitionActor(Actor):
                 await context.watch(pid)
             await context.respond(pid_resp)
 
-        # Await SpawningProcess
-        # asyncio.ensure_future(fn())
         context.reenter_after(spawning.task, fn)
-        # await self.__spawning(msg, activator, 3, spawning)
-        asyncio.ensure_future(self.__spawning(msg, activator, 3, spawning))
+        asyncio.create_task(self.__spawning(msg, activator, 3, spawning))
 
     async def __spawning(self, req: ActorPidRequest, activator: Optional[str], retry_left: int,
                          spawning: SpawningProcess):
         if not activator:
             activator = MemberList.get_activator(req.kind)
             if not activator:
-                self._logger.log_debug('No activator currently available')
+                self._logger.debug('No activator currently available')
                 spawning.set_result(ActorPidResponse.Unavailable)
                 return
 
@@ -439,7 +435,7 @@ class ClusterConfig:
 
 class Cluster():
     def __init__(self):
-        self._logger = None
+        self._logger = log.create_logger(logging.INFO, context=Cluster)
         self._config = None
 
     @property
@@ -456,7 +452,7 @@ class Cluster():
         Remote().start(self._config.address, self._config.port, self._config.remote_config)
 
         Serialization().register_file_descriptor(DESCRIPTOR)
-        # self._logger.log_information('Starting Proto.Actor cluster')
+        self._logger.log_information('Starting Proto.Actor cluster')
         host, port = self.__parse_address(ProcessRegistry().address)
         kinds = Remote().get_known_kinds()
 
@@ -469,7 +465,7 @@ class Cluster():
                                                                   self._config.member_status_value_serializer)
 
         await self._config.cluster_provider.monitor_member_status_changes()
-        # self._logger.log_information('Started Cluster')
+        self._logger.log_information('Started Cluster')
 
     async def shutdown(self, gracefull: bool = True) -> None:
         if gracefull:

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from abc import abstractmethod, ABCMeta
 from asyncio import Task, Future
 from datetime import timedelta
@@ -7,9 +8,8 @@ from functools import reduce
 from inspect import signature
 from typing import Callable, List, Awaitable, Any
 
-from protoactor.actor import messages
+from protoactor.actor import messages, log
 from protoactor.actor.cancel_token import CancelToken
-from protoactor.actor.log import get_logger
 from protoactor.actor.message_envelope import MessageEnvelope
 from protoactor.actor.message_header import MessageHeader
 from protoactor.actor.messages import Restarting, Started, Stopped, \
@@ -54,7 +54,7 @@ class AbstractSenderContext(metaclass=ABCMeta):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
-    async def request(self, target: PID, message: any):
+    async def request(self, target: PID, message: any, sender: PID = None):
         raise NotImplementedError("Should Implement this method")
 
     @abstractmethod
@@ -301,6 +301,7 @@ class ActorContextExtras():
         self._stash = []
         self._watchers = []
         self._context = context
+        self._rs = RestartStatistics(0, None)
 
     @property
     def children(self) -> List[PID]:
@@ -312,7 +313,7 @@ class ActorContextExtras():
 
     @property
     def restart_statistics(self) -> RestartStatistics:
-        return RestartStatistics(0, None)
+        return self._rs
 
     @property
     def stash(self) -> List[object]:
@@ -373,10 +374,8 @@ class ActorContext(AbstractActorContext):
         self._extras = None
         self._message_or_envelope = None
         self._state = None
-        self._logger = get_logger('ActorContext')
+        self._logger = log.create_logger(logging.INFO, context=ActorContext)
         self._receive_timeout = timedelta()
-
-        self.__incarnate_actor()
 
     @property
     def parent(self) -> PID:
@@ -476,8 +475,7 @@ class ActorContext(AbstractActorContext):
 
     async def forward(self, target: PID) -> None:
         if isinstance(self._message_or_envelope, SystemMessage):
-            self._logger.log_warning(f'SystemMessage cannot be forwarded. {self._message_or_envelope}')
-            
+            self._logger.warning(f'SystemMessage cannot be forwarded. {self._message_or_envelope}')
             return
         await self.__send_user_message(target, self._message_or_envelope)
 
@@ -537,8 +535,8 @@ class ActorContext(AbstractActorContext):
             await self.__send_user_message(target, message_envelope)
             return await cancellation_token.cancellable_wait(future.task, timeout=timeout.total_seconds())
 
-    async def escalate_failure(self, reason: Exception, who: 'PID'):
-        failure = Failure(self.my_self, reason, self._ensure_extras().restart_statistics)
+    async def escalate_failure(self, reason: Exception, message: Any):
+        failure = Failure(self.my_self, reason, self._ensure_extras().restart_statistics, message)
         await self.my_self.send_system_message(SuspendMailbox())
         if self.parent is None:
             await self.__handle_root_failure(failure)
@@ -560,6 +558,7 @@ class ActorContext(AbstractActorContext):
     async def invoke_system_message(self, message: any) -> None:
         try:
             if isinstance(message, messages.Started):
+                self.__incarnate_actor()
                 return await self.invoke_user_message(message)
             elif isinstance(message, Stop):
                 await self.__initiate_stop()
@@ -581,10 +580,10 @@ class ActorContext(AbstractActorContext):
                 self._message_or_envelope = message.message
                 return await message.action()
             else:
-                self._logger.warn(f'Unknown system message {message}')
+                self._logger.warning(f'Unknown system message {message}')
                 return None
-        except Exception as e:
-            self._logger.error(f'Error handling SystemMessage {str(e)}')
+        except Exception:
+            self._logger.exception('Error handling SystemMessage')
             raise Exception()
 
     async def invoke_user_message(self, message: any) -> None:
@@ -677,12 +676,11 @@ class ActorContext(AbstractActorContext):
 
     async def __handle_failure(self, message: Failure):
         if isinstance(self.actor, AbstractSupervisorStrategy):
-            await self.actor.handle_failure(self, message.who, message.restart_statistics, message.reason)
+            await self.actor.handle_failure(self, message.who, message.restart_statistics, message.reason,
+                                            message.message)
         else:
-            await self._props.supervisor_strategy.handle_failure(self,
-                                                                 message.who,
-                                                                 message.restart_statistics,
-                                                                 message.reason)
+            await self._props.supervisor_strategy.handle_failure(self, message.who, message.restart_statistics,
+                                                                 message.reason,  message.message)
 
     async def __handle_terminated(self, message: Terminated):
         if self._extras is not None:
@@ -692,7 +690,8 @@ class ActorContext(AbstractActorContext):
             await self.__try_restart_or_stop()
 
     async def __handle_root_failure(self, failure):
-        await Supervision.default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason)
+        await Supervision.default_strategy.handle_failure(self, failure.who, failure.restart_statistics, failure.reason,
+                                                          failure.message)
 
     async def __initiate_stop(self):
         if self._state == ContextState.Stopping:
@@ -739,7 +738,7 @@ class ActorContext(AbstractActorContext):
     async def __restart(self):
         self.__dispose_actor_if_disposable()
         self.__incarnate_actor()
-        self.my_self.send_system_message(ResumeMailbox())
+        await self.my_self.send_system_message(ResumeMailbox())
 
         await self.invoke_user_message(Started())
 

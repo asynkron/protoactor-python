@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from typing import Optional
+from typing import Optional, Any
 
 from protoactor.actor.protos_pb2 import PID
 from protoactor.actor.restart_statistics import RestartStatistics
@@ -26,22 +26,27 @@ class Restart(AbstractSystemMessage):
 
 
 class Failure(AbstractSystemMessage):
-    def __init__(self, who: PID, reason: Exception, crs: RestartStatistics) -> None:
-        self.__who = who
-        self.__reason = reason
-        self.__crs = crs
+    def __init__(self, who: PID, reason: Exception, crs: RestartStatistics, message: Any) -> None:
+        self._who = who
+        self._reason = reason
+        self._crs = crs
+        self._message = message
 
     @property
     def who(self) -> PID:
-        return self.__who
+        return self._who
 
     @property
     def reason(self) -> Exception:
-        return self.__reason
+        return self._reason
 
     @property
     def restart_statistics(self) -> RestartStatistics:
-        return self.__crs
+        return self._crs
+
+    @property
+    def message(self) -> Any:
+        return self._message
 
 
 class SystemMessage:

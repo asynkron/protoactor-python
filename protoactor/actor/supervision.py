@@ -1,9 +1,12 @@
+import logging
 from abc import ABCMeta, abstractmethod
+from datetime import timedelta
 from enum import Enum
-from typing import List
+from traceback import TracebackException
+from typing import List, Callable, Optional, Any
 
 from protoactor.actor.protos_pb2 import PID
-from .log import get_logger
+from . import log
 from .restart_statistics import RestartStatistics
 
 
@@ -14,10 +17,13 @@ class SupervisorDirective(Enum):
     Escalate = 3
 
 
+Decider = Callable[[PID, Exception], SupervisorDirective]
+
+
 class AbstractSupervisor(metaclass=ABCMeta):
 
     @abstractmethod
-    async def escalate_failure(self, who: 'PID', reason: Exception) -> None:
+    async def escalate_failure(self, reason: Exception, message: Any) -> None:
         raise NotImplementedError("Implement this on a subclass")
 
     @abstractmethod
@@ -39,109 +45,104 @@ class AbstractSupervisor(metaclass=ABCMeta):
 
 class AbstractSupervisorStrategy(metaclass=ABCMeta):
     @abstractmethod
-    async def handle_failure(self, supervisor, child: PID, rs_stats: RestartStatistics, reason: Exception):
+    async def handle_failure(self, supervisor, child: PID, rs_stats: RestartStatistics, reason: Exception,
+                             message: Any):
         raise NotImplementedError("Should Implement this method")
 
 
 class AllForOneStrategy(AbstractSupervisorStrategy):
-
-    def __init__(self, decider, max_retries_number, within_timedelta):
+    def __init__(self, decider: Decider, max_retries_number: int, within_timedelta: Optional[timedelta]):
         self._decider = decider
         self._max_retries_number = max_retries_number
         self._within_timedelta = within_timedelta
-        self._logger = get_logger('OneForOneStrategy')
+        self._logger = log.create_logger(logging.INFO, context=AllForOneStrategy)
 
     async def handle_failure(self, supervisor, child: PID,
-                       rs_stats: RestartStatistics,
-                       reason: Exception):
+                             rs_stats: RestartStatistics,
+                             reason: Exception,
+                             message: Any):
         directive = self._decider(child, reason)
+        exp = "".join(TracebackException.from_exception(reason).format())
 
         if directive == SupervisorDirective.Resume:
+            self._logger.info(f'Resuming {child.to_short_string()} Reason {exp}')
             await supervisor.resume_children(child)
-
         elif directive == SupervisorDirective.Restart:
             if self.should_stop(rs_stats):
-                print(f'Stopping {child} reason: {reason}')
+                self._logger.info(f'Stopping {child.to_short_string()} Reason {exp}')
                 await supervisor.stop_children(*supervisor.children())
             else:
-                print(f'Restarting {child} reason: {reason}')
+                self._logger.info(f'Restarting {child.to_short_string()} Reason {exp}')
                 await supervisor.restart_children(reason, supervisor.children())
-
         elif directive == SupervisorDirective.Stop:
-            print(f'Stopping {child} reason: {reason}')
+            self._logger.info(f'Stopping {child.to_short_string()} Reason {exp}')
             await supervisor.stop_children(child)
 
         elif directive == SupervisorDirective.Escalate:
-            await supervisor.escalate_failure(child, reason)
-
+            await supervisor.escalate_failure(reason, message)
         else:
-            # TODO: raise not handle error
-            pass
+            raise ValueError('Argument Out Of Range')
 
-    def should_stop(self, rs_stats: RestartStatistics):
+    def should_stop(self, rs: RestartStatistics):
         if self._max_retries_number == 0:
             return True
 
-        rs_stats.fail()
+        rs.fail()
 
-        if rs_stats.number_of_failures(self._within_timedelta) > self._max_retries_number:
-            rs_stats.reset()
+        if rs.number_of_failures(self._within_timedelta) > self._max_retries_number:
+            rs.reset()
             return True
-
         return False
 
 
 class OneForOneStrategy(AbstractSupervisorStrategy):
-
-    def __init__(self, decider, max_retries_number, within_timedelta):
+    def __init__(self, decider: Decider, max_retries_number: int, within_timedelta: Optional[timedelta]):
         self._decider = decider
         self._max_retries_number = max_retries_number
         self._within_timedelta = within_timedelta
+        self._logger = log.create_logger(logging.INFO, context=OneForOneStrategy)
 
     async def handle_failure(self, supervisor, child: PID,
-                       rs_stats: RestartStatistics,
-                       reason: Exception):
+                             rs_stats: RestartStatistics,
+                             reason: Exception,
+                             message: Any):
         directive = self._decider(child, reason)
+        exp = "".join(TracebackException.from_exception(reason).format())
 
         if directive == SupervisorDirective.Resume:
             await supervisor.resume_children(child)
-
         elif directive == SupervisorDirective.Restart:
             if self.should_stop(rs_stats):
-                print(f'Restarting {child} reason: {reason}')
+                self._logger.info(f'Stopping {child.to_short_string()} Reason {exp}')
                 await supervisor.stop_children(child)
             else:
-                print(f'Stopping  {child} reason: {reason}')
+                self._logger.info(f'Restarting {child.to_short_string()} Reason {exp}')
                 await supervisor.restart_children(reason, child)
-
         elif directive == SupervisorDirective.Stop:
-            print(f'Stopping {child} reason: {reason}')
+            self._logger.info(f'Stopping {child.to_short_string()} Reason {exp}')
             await supervisor.stop_children(child)
-
         elif directive == SupervisorDirective.Escalate:
-            await supervisor.escalate_failure(child, reason)
-
+            await supervisor.escalate_failure(reason, message)
         else:
-            # TODO: raise not handle error
-            pass
+            raise ValueError('Argument Out Of Range')
 
-    def should_stop(self, rs_stats: RestartStatistics):
+    def should_stop(self, rs: RestartStatistics):
         if self._max_retries_number == 0:
             return True
 
-        rs_stats.fail()
+        rs.fail()
 
-        if rs_stats.number_of_failures(self._within_timedelta) > self._max_retries_number:
-            rs_stats.reset()
+        if rs.number_of_failures(self._within_timedelta) > self._max_retries_number:
+            rs.reset()
             return True
-
         return False
 
 
 class AlwaysRestartStrategy(AbstractSupervisorStrategy):
     def handle_failure(self, supervisor, child: PID,
                        rs_stats: RestartStatistics,
-                       reason: Exception):
+                       reason: Exception,
+                       message: Any):
         supervisor.restart_children(reason, child)
 
 
@@ -158,7 +159,7 @@ class AlwaysRestartStrategy(AbstractSupervisorStrategy):
 class Supervision():
     @property
     def default_strategy(self) -> AbstractSupervisorStrategy:
-        return OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, 10)
+        return OneForOneStrategy(lambda who, reason: SupervisorDirective.Restart, 10, timedelta(seconds=10))
 
     @property
     def always_restart_strategy(self) -> AlwaysRestartStrategy:
