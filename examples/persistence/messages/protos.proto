@@ -1,0 +1,12 @@
+syntax = "proto3";
+package messages;
+
+message RenameCommand {
+    string name = 1;
+}
+message RenameEvent {
+    string name = 1;
+}
+message State {
+	string Name = 1;
+}
