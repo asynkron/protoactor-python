@@ -13,10 +13,11 @@ from protoactor.persistence.providers.in_memory_provider import InMemoryProvider
 from protoactor.persistence.snapshot_strategies.interval_strategy import IntervalStrategy
 
 
-class StartLoopActor():
+class StartLoopActor:
     pass
 
-class LoopParentMessage():
+
+class LoopParentMessage:
     pass
 
 
@@ -47,7 +48,7 @@ class LoopActor(Actor):
             length += 1
 
         for i in range((length // 2)):
-            name = f'{name}{vowels[randint(0, len(vowels)-1)]}{consonants[randint(0, len(consonants)-1)]}'
+            name = f'{name}{vowels[randint(0, len(vowels) - 1)]}{consonants[randint(0, len(consonants) - 1)]}'
 
         return name
 
@@ -57,13 +58,13 @@ class MyPersistenceActor(Actor):
         self._state = State()
         self._loop_actor = None
         self._timer_started = False
-        self._persistence  = Persistence.with_event_sourcing_and_snapshotting(provider,
-                                                                              provider,
-                                                                              'demo-app-id',
-                                                                              self.__apply_event,
-                                                                              self.__apply_snapshot,
-                                                                              IntervalStrategy(20),
-                                                                              lambda : self._state)
+        self._persistence = Persistence.with_event_sourcing_and_snapshotting(provider,
+                                                                             provider,
+                                                                             'demo-app-id',
+                                                                             self.__apply_event,
+                                                                             self.__apply_snapshot,
+                                                                             IntervalStrategy(20),
+                                                                             lambda: self._state)
 
     def __apply_event(self, event: Event) -> None:
         if isinstance(event, RecoverEvent):
@@ -101,13 +102,14 @@ class MyPersistenceActor(Actor):
             return
         self._timer_started = True
         print('MyPersistenceActor - StartLoopActor')
-        props = Props.from_producer(lambda : LoopActor())
+        props = Props.from_producer(lambda: LoopActor())
         self._loop_actor = context.spawn(props)
 
     async def __process_rename_command_message(self, message):
         print('MyPersistenceActor - RenameCommand')
         self._state.Name = message.name
         await self._persistence.persist_event(RenameEvent(name=message.name))
+
 
 async def main():
     context = RootContext()
