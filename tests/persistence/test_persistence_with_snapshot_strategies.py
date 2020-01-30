@@ -1,7 +1,5 @@
-import asyncio
 import threading
 import uuid
-from datetime import timedelta
 
 import pytest
 
@@ -10,9 +8,8 @@ from protoactor.actor.actor_context import AbstractContext, RootContext
 from protoactor.actor.props import Props
 from protoactor.persistence.persistence import Persistence
 from protoactor.persistence.snapshot_strategies.interval_strategy import IntervalStrategy
-from protoactor.persistence.snapshot_strategies.time_strategy import TimeStrategy
-from tests.persistence.in_memory_provider import InMemoryProvider
-from tests.persistence.test_example_persistent_actor import Multiplied, Multiply, RequestSnapshot, State
+from protoactor.persistence.providers.in_memory_provider import InMemoryProvider
+from tests.persistence.test_example_persistent_actor import Multiplied, Multiply
 from tests.test_fixtures.mock_mailbox import MockMailbox
 
 root_context = RootContext()

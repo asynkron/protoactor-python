@@ -185,7 +185,9 @@ class ProcessRegistry(metaclass=Singleton):
         return pid, False
 
     def remove(self, pid: 'PID') -> None:
-        self._local_actor_refs.pop(pid.id)
+        del self._local_actor_refs[pid.id]
+
+
 
     def next_id(self) -> str:
         with self._lock:

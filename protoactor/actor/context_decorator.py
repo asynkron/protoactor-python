@@ -40,8 +40,8 @@ class RootContextDecorator(AbstractRootContext):
     async def send(self, target: PID, message: any) -> None:
         await self._context.send(target, message)
 
-    async def request(self, target: PID, message: any) -> None:
-        await self._context.request(target, message)
+    async def request(self, target: PID, message: any, sender: PID = None) -> None:
+        await self._context.request(target, message, sender)
 
     async def request_future(self, target: PID, message: object, timeout: timedelta = None,
                              cancellation_token: CancelToken = None) -> asyncio.Future:
@@ -103,8 +103,8 @@ class ActorContextDecorator(AbstractContext):
     async def send(self, target: PID, message: any) -> None:
         await self._context.send(target, message)
 
-    async def request(self, target: PID, message: any) -> None:
-        await self._context.request(target, message)
+    async def request(self, target: PID, message: any, sender: PID = None) -> None:
+        await self._context.request(target, message, sender)
 
     async def request_future(self, target: PID, message: object, timeout: timedelta = None,
                              cancellation_token: CancelToken = None) -> asyncio.Future:

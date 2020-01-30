@@ -10,7 +10,7 @@ from protoactor.actor.actor_context import RootContext, AbstractContext
 from protoactor.actor.messages import Started
 from protoactor.actor.props import Props
 from protoactor.persistence.persistence import Persistence
-from tests.persistence.in_memory_provider import InMemoryProvider
+from protoactor.persistence.providers.in_memory_provider import InMemoryProvider
 from tests.test_fixtures.mock_mailbox import MockMailbox
 
 root_context = RootContext()
